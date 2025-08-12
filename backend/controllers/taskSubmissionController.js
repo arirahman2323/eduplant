@@ -41,10 +41,10 @@ const submitTaskAnswer = async (req, res) => {
       return res.status(400).json({ message: "This task is not marked as a KBK" });
     }
 
-    const alreadySubmitted = await TaskSubmission.findOne({ task: taskId, user: userId });
-    if (alreadySubmitted) {
-      return res.status(400).json({ message: "You have already submitted this task" });
-    }
+    // const alreadySubmitted = await TaskSubmission.findOne({ task: taskId, user: userId });
+    // if (alreadySubmitted) {
+    //   return res.status(400).json({ message: "You have already submitted this task" });
+    // }
 
     if (type === "problem") {
       problemAnswer = problemAnswer.map((ans) => {
