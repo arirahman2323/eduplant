@@ -252,9 +252,9 @@ const submitMindmapAnswer = async (req, res) => {
       task: taskId,
       user: req.user._id,
     });
-    if (existing) {
-      return res.status(400).json({ message: "You already submitted" });
-    }
+    // if (existing) {
+    //   return res.status(400).json({ message: "You already submitted" });
+    // }
 
     // Simpan dengan URL lengkap
     const submission = await MindmapSubmission.create({

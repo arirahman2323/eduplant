@@ -131,14 +131,35 @@ const getTaskById = async (req, res) => {
 // @access  Private (Admin)
 const createTask = async (req, res) => {
   try {
-    const { title, description, priority, dueDate, assignedTo = [], attachments, todoChecklist, essayQuestions = [], multipleChoiceQuestions = [], problem = [] } = req.body;
+    const {
+      title,
+      description,
+      priority,
+      dueDate,
+      assignedTo = [],
+      todoChecklist,
+      essayQuestions = [],
+      multipleChoiceQuestions = [],
+      problem = []
+    } = req.body;
 
-    // Validasi assignedTo harus array
+    // Validasi assignedTo
     if (!Array.isArray(assignedTo)) {
       return res.status(400).json({ message: "Assigned to must be an array of user IDs" });
     }
 
-    // Deteksi type berdasarkan path
+    // Ambil semua file yang diupload
+    const uploadedFiles = req.files?.map(file =>
+      `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
+    ) || [];
+
+    // Pisahkan PDF dan gambar
+    const pdfFiles = uploadedFiles.filter(url => url.toLowerCase().endsWith(".pdf"));
+    const attachments = uploadedFiles.filter(url =>
+      !url.toLowerCase().endsWith(".pdf")
+    );
+
+    // Deteksi tipe task
     const path = req.route.path;
     const isPretest = path === "/pretest";
     const isPostest = path === "/postest";
@@ -147,15 +168,16 @@ const createTask = async (req, res) => {
     const isLo = path === "/lo";
     const isKbk = path === "/kbk";
 
-    // Untuk LO/KBK, buang correctAnswer dari soal pilihan ganda
+    // Hapus correctAnswer kalau LO/KBK
     let processedMCQ = multipleChoiceQuestions;
     if (isLo || isKbk) {
-      processedMCQ = multipleChoiceQuestions.map((q) => ({
+      processedMCQ = multipleChoiceQuestions.map(q => ({
         question: q.question,
         options: q.options,
       }));
     }
 
+    // Simpan task
     const task = await Task.create({
       title,
       description,
@@ -163,7 +185,8 @@ const createTask = async (req, res) => {
       dueDate,
       assignedTo,
       createdBy: req.user._id,
-      attachments,
+      attachments, // gambar
+      pdfFiles,    // PDF
       todoChecklist,
       essayQuestions,
       multipleChoiceQuestions: processedMCQ,
@@ -176,7 +199,7 @@ const createTask = async (req, res) => {
       isKbk,
     });
 
-    // Jika ada problem, buatkan group untuk masing-masing
+    // Buat group kalau ada problem
     const updatedProblem = await Promise.all(
       task.problem.map(async (p, index) => {
         const group = await Group.create({
@@ -185,15 +208,10 @@ const createTask = async (req, res) => {
           taskId: task._id,
           problemId: p._id,
         });
-
-        return {
-          ...p.toObject(),
-          groupId: group._id,
-        };
+        return { ...p.toObject(), groupId: group._id };
       })
     );
 
-    // Update task dengan groupId pada problem
     task.problem = updatedProblem;
     await task.save();
 
@@ -202,6 +220,7 @@ const createTask = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 // @desc    Update task details
 // @route   PUT /api/tasks/:id
@@ -218,6 +237,9 @@ const updateTask = async (req, res) => {
     if ("todoChecklist" in req.body) task.todoChecklist = req.body.todoChecklist;
     if ("attachments" in req.body) task.attachments = req.body.attachments;
     if ("problem" in req.body) task.problem = req.body.problem;
+    if ("essayQuestions" in req.body) task.essayQuestions = req.body.essayQuestions;
+    if ("multipleChoiceQuestions" in req.body) task.multipleChoiceQuestions = req.body.multipleChoiceQuestions;
+    if ("pdfFiles" in req.body) task.pdfFiles = req.body.pdfFiles;
 
     if ("assignedTo" in req.body) {
       if (!Array.isArray(req.body.assignedTo)) {
@@ -319,12 +341,30 @@ const deleteTask = async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
+
+    // Hapus file upload (pdfFiles + attachments)
+    [...task.pdfFiles, ...task.attachments].forEach(fileUrl => {
+      const filePath = path.join(__dirname, "..", "uploads", path.basename(fileUrl));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    });
+
+    // Hapus group terkait problem
+    await Group.deleteMany({ taskId: task._id });
+
+    // (Opsional) Hapus submissions juga
+    await TaskSubmission.deleteMany({ taskId: task._id });
+
+    // Hapus task
     await task.deleteOne();
+
     res.json({ message: "Task deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 // @desc Delete specific question from a task
 // @route DELETE /api/tasks/:taskId/questions/:questionId?type=essay|multipleChoice

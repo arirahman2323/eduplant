@@ -1,5 +1,6 @@
 const express = require("express");
 const { protect, adminOnly } = require("../middlewares/authMiddleware");
+const upload = require("../middlewares/uploadMiddleware"); // ← multer config kamu
 const {
   getDashboardData,
   getUserDashboardData,
@@ -19,9 +20,11 @@ const {
 
 const router = express.Router();
 
+// Full submissions & e-portfolio
 router.get("/full-submissions/:userId", protect, getFullTaskSubmissionsByUser);
 router.get("/eportfolio/:userId/download", protect, downloadEportfolioAsPdf);
-// Dashboard routes
+
+// Dashboard
 router.get("/dashboard-data", protect, getDashboardData);
 router.get("/user-dashboard-data", protect, getUserDashboardData);
 
@@ -35,13 +38,13 @@ router.delete("/:id", protect, adminOnly, deleteTask);
 router.put("/:id/status", protect, updateTaskStatus);
 router.put("/:id/todo", protect, updateTaskChecklist);
 
-// Create task by type
-router.post("/pretest", protect, createTask);
-router.post("/postest", protect, createTask);
-router.post("/problem", protect, createTask);
-router.post("/refleksi", protect, createTask); // ✅ Ditambahkan
-router.post("/lo", protect, createTask); // ✅ Ditambahkan
-router.post("/kbk", protect, createTask); // ✅ Ditambahkan
+// Create task by type (pakai upload)
+router.post("/pretest", protect, upload.array("files"), createTask);
+router.post("/postest", protect, upload.array("files"), createTask);
+router.post("/problem", protect, upload.array("files"), createTask);
+router.post("/refleksi", protect, upload.array("files"), createTask);
+router.post("/lo", protect, upload.array("files"), createTask);
+router.post("/kbk", protect, upload.array("files"), createTask);
 
 // Update task questions only
 router.put("/pretest/:id", protect, updateTaskQuestionsOnly);
@@ -60,12 +63,17 @@ router.get("/:taskId/problem/:problemId/group", protect, async (req, res) => {
     const task = await Task.findById(req.params.taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    const problemItem = task.problem.find((p) => p._id.toString() === req.params.problemId);
+    const problemItem = task.problem.find(
+      (p) => p._id.toString() === req.params.problemId
+    );
     if (!problemItem || !problemItem.groupId) {
       return res.status(404).json({ message: "Group for this problem not found" });
     }
 
-    const group = await Group.findById(problemItem.groupId).populate("members", "name email profileImageUrl");
+    const group = await Group.findById(problemItem.groupId).populate(
+      "members",
+      "name email profileImageUrl"
+    );
     if (!group) return res.status(404).json({ message: "Group not found" });
 
     res.json(group);

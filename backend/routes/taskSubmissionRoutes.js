@@ -11,7 +11,7 @@ const { submitTaskAnswer,
     updateTotalScore } = require("../controllers/taskSubmissionController");
 
 // Task Submission Routes
-router.post("/:type/:taskId", protect, submitTaskAnswer);
+router.post("/:type/:taskId", protect, upload.array("files"), submitTaskAnswer);
 // get submissions by user
 router.get("/:type/user/:userId", protect, getSubmissionsByUser);
 // get all task submissions

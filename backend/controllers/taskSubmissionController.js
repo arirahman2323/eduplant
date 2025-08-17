@@ -45,18 +45,23 @@ const submitTaskAnswer = async (req, res) => {
     // if (alreadySubmitted) {
     //   return res.status(400).json({ message: "You have already submitted this task" });
     // }
+    
+    // Ambil file PDF dari req.files
+    const pdfFiles = req.files?.map(file =>
+      `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
+    ) || [];
 
+    // Handle problem answers
     if (type === "problem") {
       problemAnswer = problemAnswer.map((ans) => {
         const matchedProblem = task.problem.find((p) => p._id.toString() === ans.questionId);
         if (!matchedProblem) {
           throw new Error("Invalid problem ID");
         }
-
         return {
           questionId: ans.questionId,
           problem: ans.problem,
-          groupId: matchedProblem.groupId, // ✅ Ambil groupId dari task
+          groupId: matchedProblem.groupId,
         };
       });
     }
@@ -67,6 +72,7 @@ const submitTaskAnswer = async (req, res) => {
       essayAnswers,
       multipleChoiceAnswers,
       problemAnswer, // <- Disimpan
+      pdfFiles, // <- Disimpan
     });
 
     res.status(201).json({ message: "Task submitted successfully", submission });
@@ -223,44 +229,22 @@ const updateTotalScore = async (req, res) => {
   try {
     const { type, taskId, userId } = req.params;
 
-    console.log("📥 req.body:", req.body);
-    console.log("📎 req.file:", req.file);
-
-    // Ambil score dan explanation dari body
     let { score, explanation } = req.body || {};
-
-    // Convert score dari string ke number
     score = Number(score);
 
-    // Validasi tipe tugas
     const validTypes = ["pretest", "postest", "problem", "refleksi", "lo", "kbk"];
     if (!validTypes.includes(type)) {
-      return res.status(400).json({
-        message: "Type must be one of: pretest, postest, problem, refleksi, lo, kbk",
-      });
+      return res.status(400).json({ message: "Type must be one of: pretest, postest, problem, refleksi, lo, kbk" });
     }
 
-    // Validasi nilai
     if (isNaN(score)) {
       return res.status(400).json({ message: "Score must be a valid number" });
     }
 
-    // Cari semua submission user + populate task
-    const submissions = await TaskSubmission.find({ user: userId }).populate("task");
-
-    // Filter berdasarkan tipe
-    const targetSubmissions = submissions.filter((sub) => {
-      if (type === "pretest") return sub.task?.isPretest;
-      if (type === "postest") return sub.task?.isPostest;
-      if (type === "problem") return sub.task?.isProblem;
-      if (type === "refleksi") return sub.task?.isRefleksi;
-      if (type === "lo") return sub.task?.isLo;
-      if (type === "kbk") return sub.task?.isKbk;
-      return false;
-    });
-
-    // Temukan submission dengan taskId
-    const submissionToUpdate = targetSubmissions.find((sub) => sub.task._id.toString() === taskId);
+    // 🔑 Cari submission terbaru berdasarkan user + task
+    const submissionToUpdate = await TaskSubmission.findOne({ user: userId, task: taskId })
+      .sort({ updatedAt: -1 }) // ambil yang paling terakhir dikirim
+      .populate("task");
 
     if (!submissionToUpdate) {
       return res.status(404).json({
@@ -268,21 +252,26 @@ const updateTotalScore = async (req, res) => {
       });
     }
 
+    // Validasi tipe task
+    if (type === "pretest" && !submissionToUpdate.task?.isPretest) return res.status(400).json({ message: "This task is not marked as a pretest" });
+    if (type === "postest" && !submissionToUpdate.task?.isPostest) return res.status(400).json({ message: "This task is not marked as a postest" });
+    if (type === "problem" && !submissionToUpdate.task?.isProblem) return res.status(400).json({ message: "This task is not marked as a problem" });
+    if (type === "refleksi" && !submissionToUpdate.task?.isRefleksi) return res.status(400).json({ message: "This task is not marked as a refleksi" });
+    if (type === "lo" && !submissionToUpdate.task?.isLo) return res.status(400).json({ message: "This task is not marked as a LO" });
+    if (type === "kbk" && !submissionToUpdate.task?.isKbk) return res.status(400).json({ message: "This task is not marked as a KBK" });
+
     // Update nilai
     submissionToUpdate.score = score;
 
     // Untuk LO / KBK, simpan explanation dan file
     if (["lo", "kbk"].includes(type)) {
       submissionToUpdate.explanation = explanation || "";
-
       if (req.file) {
         submissionToUpdate.feedbackFile = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
       }
     }
 
-    // Tandai task selesai (optional)
-    submissionToUpdate.task.status = "Completed";
-
+    submissionToUpdate.task.status = "Completed"; // optional
     await submissionToUpdate.save();
 
     res.json({
@@ -291,12 +280,10 @@ const updateTotalScore = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error updating total score:", error);
-    res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 module.exports = {
   submitTaskAnswer,

@@ -41,6 +41,7 @@ const taskSchema = new mongoose.Schema(
     assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     attachments: [{ type: String }],
+    pdfFiles: [{ type: String }],
     todoChecklist: [todoSchema],
     progress: { type: Number, default: 0 },
     essayQuestions: [essaySchema],
