@@ -5,9 +5,10 @@ import { API_PATHS } from "../../../utils/apiPaths";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import { HiChevronLeft } from "react-icons/hi";
 import { GiBackwardTime } from "react-icons/gi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 const KbkResultAnswer = () => {
+  const { id } = useParams();
   const { user } = useContext(UserContext);
   const [task, setTask] = useState(null);
   const [submission, setSubmission] = useState(null);
@@ -16,14 +17,20 @@ const KbkResultAnswer = () => {
 
   useEffect(() => {
     const fetchTaskAndSubmission = async () => {
+      if (!user?._id) return;
       try {
-        const [taskRes, submissionRes] = await Promise.all([axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_TYPE("kbk")), axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("kbk", user._id))]);
+        // Ambil data soal yang spesifik
+        const taskRes = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(id));
+        setTask(taskRes.data);
 
-        const loTask = taskRes.data.tasks[0];
-        setTask(loTask);
+        // Ambil data jawaban terbaru
+        const submissionRes = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("kbk", user._id));
+        const userSubmissions = (submissionRes.data?.submissions || []).filter((s) => s.task._id === id);
 
-        const data = submissionRes.data.submissions.find((s) => s.task._id === loTask._id);
-        setSubmission(data);
+        if (userSubmissions.length > 0) {
+          const latestSubmission = userSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+          setSubmission(latestSubmission);
+        }
       } catch (error) {
         console.error("❌ Error fetching data:", error);
       } finally {
@@ -31,8 +38,8 @@ const KbkResultAnswer = () => {
       }
     };
 
-    if (user?._id) fetchTaskAndSubmission();
-  }, [user]);
+    fetchTaskAndSubmission();
+  }, [id, user]);
 
   if (loading) return <div className="text-center mt-10">Memuat hasil penilaian...</div>;
 
@@ -47,7 +54,7 @@ const KbkResultAnswer = () => {
           <div className="bg-white p-4 rounded-lg shadow mb-6">
             <h2 className="text-xl font-semibold">{task.title}</h2>
             <p className="text-gray-600">{task.description}</p>
-            <p className="mt-4 text-sm text-black">{task.multipleChoiceQuestions?.length || 0} Pertanyaan</p>
+            <p className="mt-4 text-sm text-black">{(task.multipleChoiceQuestions?.length || 0) + (task.essayQuestions?.length || 0)} Pertanyaan</p>
             <div className="mt-2 h-2 bg-blue-500 rounded-full"></div>
           </div>
 
@@ -64,17 +71,29 @@ const KbkResultAnswer = () => {
               </div>
             )}
 
+            {/* Menampilkan Jawaban Kuisioner */}
             {task.multipleChoiceQuestions?.map((q, i) => {
               const userAnswer = submission.multipleChoiceAnswers.find((a) => a.questionId === q._id);
-
               return (
-                <div key={q._id} className="mb-6">
-                  <h4 className="font-semibold">Pertanyaan {i + 1}</h4>
+                <div key={q._id} className="mb-4 border-t pt-4">
+                  <h4 className="font-semibold">Pertanyaan Kuisioner {i + 1}</h4>
                   <p className="mb-2">{q.question}</p>
-
                   <p className="mt-2 text-sm">
                     Jawaban kamu: <strong>{userAnswer?.selectedOption || "-"}</strong>
                   </p>
+                </div>
+              );
+            })}
+
+            {/* Menampilkan Jawaban Angket */}
+            {task.essayQuestions?.map((q, i) => {
+              const userAnswer = submission.essayAnswers.find((a) => a.questionId === q._id);
+              return (
+                <div key={q._id} className="mb-4 border-t pt-4">
+                  <h4 className="font-semibold">Pertanyaan Angket {i + 1}</h4>
+                  <p className="mb-2">{q.question}</p>
+                  <p className="text-sm">Jawaban kamu:</p>
+                  <div className="w-full p-3 bg-gray-50 border rounded text-sm text-gray-800 whitespace-pre-wrap">{userAnswer?.answer || "-"}</div>
                 </div>
               );
             })}

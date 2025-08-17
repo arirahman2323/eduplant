@@ -17,65 +17,62 @@ const RefleksiPage = () => {
   const [submission, setSubmission] = useState(null);
   const { user } = useContext(UserContext);
 
-  useEffect(() => {
-    const getTask = async () => {
-      try {
-        const res = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(id));
-        setTask(res.data);
-      } catch (e) {
-        console.error("Error loading task:", e);
-      }
-    };
-
-    const getSubmission = async () => {
-      try {
-        const res = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("refleksi", user._id));
-        const data = res.data.submissions.find((s) => s.task._id === id);
-        if (data) {
-          setSubmission(data);
-
-          const mcq = {};
-          data.multipleChoiceAnswers.forEach((a) => {
-            mcq[a.questionId] = a.selectedOption;
-          });
-          setAnswers(mcq);
-
-          const essay = {};
-          data.essayAnswers.forEach((a) => {
-            essay[a.questionId] = a.answer;
-          });
-          setEssayAnswers(essay);
-        }
-      } catch (err) {
-        console.error("Error fetching submission:", err);
-      }
-    };
-
-    if (user?._id) {
-      getTask();
-      getSubmission();
+  const getTask = async () => {
+    try {
+      const res = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(id));
+      setTask(res.data);
+    } catch (e) {
+      console.error("Error loading task:", e);
     }
-  }, [id, user?._id]);
-
-  const handleMCQChange = (qId, opt) => {
-    if (submission) return;
-    setAnswers((prev) => ({ ...prev, [qId]: opt }));
   };
 
+  const getSubmission = async () => {
+    if (!user?._id) return;
+    try {
+      const res = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("refleksi", user._id));
+      const userSubmissions = res.data.submissions.filter((s) => s.task._id === id);
+
+      if (userSubmissions.length > 0) {
+        const latestSubmission = userSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        setSubmission(latestSubmission);
+
+        const essay = {};
+        latestSubmission.essayAnswers.forEach((a) => {
+          essay[a.questionId] = a.answer;
+        });
+        setEssayAnswers(essay);
+      }
+    } catch (err) {
+      console.error("Error fetching submission:", err);
+    }
+  };
+
+  useEffect(() => {
+    getTask();
+  }, [id]);
+
+  useEffect(() => {
+    if (user?._id) {
+      getSubmission();
+    }
+  }, [user, id]);
+
   const handleEssayChange = (qId, val) => {
-    if (submission) return;
     setEssayAnswers((prev) => ({ ...prev, [qId]: val }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!task || submission) return;
+    if (!task) return;
+
+    if (submission) {
+      const isConfirmed = window.confirm("Mengirim ulang akan membuat lembar jawaban baru dan nilai sebelumnya tidak berlaku lagi hingga dinilai kembali oleh guru. Lanjutkan?");
+      if (!isConfirmed) {
+        return;
+      }
+    }
 
     const payload = {
-      multipleChoiceAnswers: Object.entries(answers).map(([questionId, selectedOption]) => ({
-        questionId,
-        selectedOption,
-      })),
       essayAnswers: Object.entries(essayAnswers).map(([questionId, answer]) => ({
         questionId,
         answer,
@@ -85,8 +82,7 @@ const RefleksiPage = () => {
     try {
       await axiosInstance.post(API_PATHS.TASKS.POST_SUBMISSION_BY_TASK_ID("refleksi", id), payload);
       toast.success("Jawaban berhasil dikirim!");
-      window.location.reload();
-      setSubmission(res.data.submission); // refresh untuk ambil ulang data submission
+      await getSubmission();
     } catch (err) {
       toast.error("Gagal mengirim jawaban");
       console.error("Error submitting answers:", err.response?.data.message || err.message);
@@ -122,13 +118,12 @@ const RefleksiPage = () => {
                   className="w-full border-2 border-gray-300 rounded px-3 py-2 resize-none"
                   rows={4}
                   placeholder="Isi jawaban refleksi..."
-                  disabled={!!submission}
                 />
               </div>
             ))}
 
-            <button type="submit" disabled={!!submission} className={`w-full ${submission ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"} text-lg text-white py-2.5 rounded-md transition cursor-pointer`}>
-              {submission ? "Sudah Dikirim" : "Kumpulkan"}
+            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-lg text-white py-2.5 rounded-md transition cursor-pointer">
+              {submission ? "Kirim Ulang Jawaban" : "Kumpulkan"}
             </button>
 
             <button

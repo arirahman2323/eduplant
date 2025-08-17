@@ -30,7 +30,7 @@ const ProblemGroupPage = () => {
   const [newMessage, setNewMessage] = useState("");
   const [joined, setJoined] = useState(false);
   const messageEndRef = useRef(null);
-
+  console.log(task);
   useEffect(() => {
     const fetchData = async () => {
       try {

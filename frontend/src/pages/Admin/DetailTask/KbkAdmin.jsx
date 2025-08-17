@@ -22,6 +22,7 @@ const KbkAdmin = () => {
     attachments: [],
     todoChecklist: [],
     multipleChoiceQuestions: [],
+    essayQuestions: [],
   });
 
   useEffect(() => {
@@ -39,6 +40,7 @@ const KbkAdmin = () => {
             attachments: data.attachments || [],
             todoChecklist: data.todoChecklist?.length ? data.todoChecklist : [],
             multipleChoiceQuestions: data.multipleChoiceQuestions || [],
+            essayQuestions: data.essayQuestions || [],
           });
         })
         .catch(() => toast.error("Gagal memuat data KBK"));
@@ -64,9 +66,11 @@ const KbkAdmin = () => {
     }));
   };
 
-  const handleMCQChange = (index, field, value) => {
+  const handleMCQChange = (index, value) => {
     const updated = [...form.multipleChoiceQuestions];
-    if (field === "question" || field === "answer") updated[index][field] = value;
+    if (updated[index]) {
+      updated[index].question = value;
+    }
     setForm((prev) => ({ ...prev, multipleChoiceQuestions: updated }));
   };
 
@@ -77,13 +81,45 @@ const KbkAdmin = () => {
   };
 
   const handleDeleteMCQ = async (id) => {
+    if (!taskId) {
+      setForm((prev) => ({ ...prev, multipleChoiceQuestions: prev.multipleChoiceQuestions.filter((q) => q._id !== id) }));
+      return;
+    }
     if (taskId && id) {
       try {
         await axiosInstance.delete(API_PATHS.TASKS.DELETE_QUESTION_BY_ID_TYPE(taskId, "multipleChoice", id));
-        setForm((prev) => ({
-          ...prev,
-          multipleChoiceQuestions: prev.multipleChoiceQuestions.filter((q) => q._id !== id),
-        }));
+        setForm((prev) => ({ ...prev, multipleChoiceQuestions: prev.multipleChoiceQuestions.filter((q) => q._id !== id) }));
+        toast.success("Soal berhasil dihapus");
+      } catch {
+        toast.error("Gagal menghapus soal");
+      }
+    }
+  };
+
+  const handleAddEssay = () => {
+    setForm((prev) => ({
+      ...prev,
+      essayQuestions: [...prev.essayQuestions, { _id: new ObjectId().toHexString(), question: "" }],
+    }));
+  };
+
+  const handleEssayChange = (index, value) => {
+    const updated = [...form.essayQuestions];
+    if (updated[index]) {
+      updated[index].question = value;
+    }
+    setForm((prev) => ({ ...prev, essayQuestions: updated }));
+  };
+
+  const handleDeleteEssay = async (id) => {
+    if (!taskId) {
+      setForm((prev) => ({ ...prev, essayQuestions: prev.essayQuestions.filter((q) => q._id !== id) }));
+      return;
+    }
+    if (taskId && id) {
+      try {
+        await axiosInstance.delete(API_PATHS.TASKS.DELETE_QUESTION_BY_ID_TYPE(taskId, "essay", id));
+        setForm((prev) => ({ ...prev, essayQuestions: prev.essayQuestions.filter((q) => q._id !== id) }));
         toast.success("Soal berhasil dihapus");
       } catch {
         toast.error("Gagal menghapus soal");
@@ -97,7 +133,7 @@ const KbkAdmin = () => {
 
     try {
       if (taskId) {
-        await axiosInstance.put(API_PATHS.TASKS.UPDATE_TASK_BY_ID(taskId, taskType), form);
+        await axiosInstance.put(`/api/tasks/kbk/${taskId}`, form);
         toast.success("Berpikir Kreatif berhasil diperbarui");
       } else {
         await axiosInstance.post(API_PATHS.TASKS.CREATE_TASK_BY_TYPE(taskType), form);
@@ -123,24 +159,35 @@ const KbkAdmin = () => {
           <textarea name="description" value={form.description} onChange={handleChange} placeholder="Deskripsi" className="border border-gray-400 rounded-md p-2 w-full"></textarea>
           <input name="dueDate" value={form.dueDate} onChange={handleChange} type="datetime-local" className="border border-gray-400 rounded-md p-2 w-full" />
 
-          <div className="border-t-2 border-gray-300 pt-2">
-            <h3 className="font-medium">Soal Berpikir Kreatif</h3>
+          {/* Bagian Kuisioner */}
+          <div className="border-t-2 border-gray-200 pt-4">
+            <h3 className="font-medium text-lg mb-2">Soal Kuisioner (Pilihan Ganda)</h3>
             {form.multipleChoiceQuestions.map((q, i) => (
-              <div key={q._id} className="space-y-1 mb-4">
-                <input value={q.question} onChange={(e) => handleMCQChange(i, "question", e.target.value)} placeholder={`Soal ${i + 1}`} className="border border-gray-400 rounded-md p-2 w-full" />
-                {/* <h3 className="font-medium">Opsi Jawaban:</h3>
-                {q.options.map((opt, j) => (
-                  <input key={j} value={opt} onChange={(e) => handleOptionChange(i, j, e.target.value)} placeholder={`Opsi ${j + 1}`} className="border border-gray-400 rounded-md p-2 w-full mt-1" />
-                ))}
-                <h3 className="font-medium">Jawaban Benar (opsional):</h3>
-                <input value={q.answer} onChange={(e) => handleMCQChange(i, "answer", e.target.value)} placeholder="Jawaban benar (boleh dikosongi)" className="border border-gray-400 rounded-md p-2 w-full mt-1" /> */}
-                <button type="button" onClick={() => handleDeleteMCQ(q._id)} className="text-red-500 text-sm cursor-pointer">
-                  Hapus Soal
+              <div key={q._id || i} className="flex items-center gap-2 mb-2">
+                <input value={q.question} onChange={(e) => handleMCQChange(i, e.target.value)} placeholder={`Pertanyaan Kuisioner ${i + 1}`} className="border border-gray-400 rounded-md p-2 w-full" />
+                <button type="button" onClick={() => handleDeleteMCQ(q._id)} className="text-red-500 text-sm">
+                  Hapus
                 </button>
               </div>
             ))}
-            <button type="button" onClick={handleAddMCQ} className="text-blue-500 cursor-pointer">
-              + Tambah Soal Berpikir Kreatif
+            <button type="button" onClick={handleAddMCQ} className="text-blue-500 cursor-pointer mt-2">
+              + Tambah Soal Kuisioner
+            </button>
+          </div>
+
+          {/* Bagian Angket */}
+          <div className="border-t-2 border-gray-200 pt-4">
+            <h3 className="font-medium text-lg mb-2">Soal Angket (Esai)</h3>
+            {form.essayQuestions.map((q, i) => (
+              <div key={q._id || i} className="flex items-center gap-2 mb-2">
+                <input value={q.question} onChange={(e) => handleEssayChange(i, e.target.value)} placeholder={`Pertanyaan Angket ${i + 1}`} className="border border-gray-400 rounded-md p-2 w-full" />
+                <button type="button" onClick={() => handleDeleteEssay(q._id)} className="text-red-500 text-sm">
+                  Hapus
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={handleAddEssay} className="text-blue-500 cursor-pointer mt-2">
+              + Tambah Soal Angket
             </button>
           </div>
 

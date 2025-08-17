@@ -24,7 +24,7 @@ const PlantProgressCircle = ({ totalTasks, completedTasks }) => {
   const [prevLevel, setPrevLevel] = useState(1);
   const progress = Math.ceil((completedTasks / totalTasks) * 100);
   const newLevel = Math.min(15, Math.max(1, completedTasks + 1));
-  console.log(completedTasks, totalTasks);
+
   useEffect(() => {
     if (newLevel !== currentLevel) {
       setPrevLevel(currentLevel);

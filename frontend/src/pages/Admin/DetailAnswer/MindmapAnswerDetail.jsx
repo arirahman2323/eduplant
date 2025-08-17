@@ -25,14 +25,17 @@ const MindmapAnswerDetail = () => {
         setTask(taskRes.data);
 
         const submissionRes = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_MINDMAP_ADMIN_BY_ID_USER(userId));
+        const userSubmissions = submissionRes.data.filter((s) => s.task._id === taskId);
 
-        if (!submissionRes.data) {
+        if (userSubmissions.length === 0) {
           toast.error("Jawaban tidak ditemukan");
+          setIsLoading(false);
           return;
         }
 
-        setSubmission(submissionRes.data[0]);
-        setScore(submissionRes.data.score ?? 0);
+        const latestSubmission = userSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        setSubmission(latestSubmission);
+        setScore(latestSubmission.score ?? 0);
       } catch (err) {
         console.error(err);
         toast.error("Gagal memuat data");
@@ -47,7 +50,7 @@ const MindmapAnswerDetail = () => {
   }, [taskId, userId]);
 
   const handleScoreSubmit = async () => {
-    if (!taskId || !userId) return toast.error("ID tidak valid");
+    if (!submission) return toast.error("ID tidak valid");
 
     try {
       setIsSubmitting(true);

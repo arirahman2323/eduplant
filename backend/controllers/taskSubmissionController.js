@@ -45,11 +45,9 @@ const submitTaskAnswer = async (req, res) => {
     // if (alreadySubmitted) {
     //   return res.status(400).json({ message: "You have already submitted this task" });
     // }
-    
+
     // Ambil file PDF dari req.files
-    const pdfFiles = req.files?.map(file =>
-      `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
-    ) || [];
+    const pdfFiles = req.files?.map((file) => `${req.protocol}://${req.get("host")}/uploads/${file.filename}`) || [];
 
     // Handle problem answers
     if (type === "problem") {
@@ -243,7 +241,7 @@ const updateTotalScore = async (req, res) => {
 
     // 🔑 Cari submission terbaru berdasarkan user + task
     const submissionToUpdate = await TaskSubmission.findOne({ user: userId, task: taskId })
-      .sort({ updatedAt: -1 }) // ambil yang paling terakhir dikirim
+      .sort({ createdAt: -1 }) // ambil yang paling terakhir dikirim
       .populate("task");
 
     if (!submissionToUpdate) {
@@ -283,7 +281,6 @@ const updateTotalScore = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 
 module.exports = {
   submitTaskAnswer,

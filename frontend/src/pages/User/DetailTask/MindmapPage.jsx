@@ -21,25 +21,35 @@ const MindmapPage = () => {
   const [file, setFile] = useState(null);
 
   // Fetch Task + Submission
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const resTask = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_MINDMAP_BY_ID(id));
-        setTask(resTask.data);
+  const fetchData = async () => {
+    try {
+      const resTask = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_MINDMAP_BY_ID(id));
+      setTask(resTask.data);
 
-        const resSub = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_MINDMAP_BY_ID_USER(id));
-        setSubmission(resSub.data);
-      } catch (err) {
-        console.error("Error fetching mindmap data", err);
+      const resSub = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_MINDMAP_BY_ID_USER(id));
+      const userSubmissions = (resSub.data?.submissions || []).filter((s) => s.task._id === id);
+
+      if (userSubmissions.length > 0) {
+        const latestSubmission = userSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        setSubmission(latestSubmission);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching mindmap data", err);
+    }
+  };
 
+  useEffect(() => {
     if (user?._id) fetchData();
   }, [id, user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file || submission) return;
+    if (!file) return;
+
+    if (submission) {
+      const isConfirmed = window.confirm("Mengirim ulang akan mengganti file jawaban Anda sebelumnya. Lanjutkan?");
+      if (!isConfirmed) return;
+    }
 
     const formData = new FormData();
     formData.append("pdf", file);
@@ -49,7 +59,7 @@ const MindmapPage = () => {
         headers: { "Content-Type": "multipart/form-data" },
       });
       toast.success("Berhasil mengumpulkan jawaban!");
-      window.location.reload();
+      fetchData();
     } catch (err) {
       toast.error("Gagal mengirim jawaban");
       console.error(err);
@@ -96,14 +106,21 @@ const MindmapPage = () => {
             <h3 className="text-lg font-semibold mb-2">Upload Jawaban</h3>
             <label htmlFor="file" className="block border-dashed border-2 border-blue-500 rounded-md p-4 text-center cursor-pointer text-sm text-blue-500">
               Upload file dalam format PDF
-              <input type="file" id="file" accept=".pdf" onChange={(e) => setFile(e.target.files[0])} className="hidden" disabled={!!submission} />
+              <input type="file" id="file" accept=".pdf" onChange={(e) => setFile(e.target.files[0])} className="hidden" />
             </label>
 
             {file && <p className="text-sm mt-2 text-gray-600">File dipilih: {file.name}</p>}
-            {submission && <p className="text-sm mt-2 text-green-600">Sudah mengumpulkan: {submission.file}</p>}
+            {submission && (
+              <p className="text-sm mt-2 text-green-600">
+                Jawaban terakhir yang dikumpulkan:{" "}
+                <a href={submission.answerPdf} target="_blank" rel="noopener noreferrer" className="underline">
+                  {submission.answerPdf.split("/").pop()}
+                </a>
+              </p>
+            )}
 
-            <button onClick={handleSubmit} disabled={!!submission} className={`w-full mt-4 py-2.5 rounded-md text-white text-lg transition cursor-pointer ${submission ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}>
-              {submission ? "Sudah Dikirim" : "Kumpulkan"}
+            <button onClick={handleSubmit} className="w-full mt-4 py-2.5 rounded-md text-white text-lg transition cursor-pointer bg-blue-600 hover:bg-blue-700">
+              {submission ? "Kirim Ulang" : "Kumpulkan"}
             </button>
 
             <button

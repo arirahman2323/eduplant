@@ -5,9 +5,11 @@ import { API_PATHS } from "../../../utils/apiPaths";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
 import { HiChevronLeft } from "react-icons/hi";
 import { GiBackwardTime } from "react-icons/gi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 const ProblemResultAnswer = () => {
+  const { id } = useParams();
+  const taskId = id;
   const { user } = useContext(UserContext);
   const [task, setTask] = useState(null);
   const [submission, setSubmission] = useState(null);
@@ -19,11 +21,25 @@ const ProblemResultAnswer = () => {
       try {
         const [taskRes, submissionRes] = await Promise.all([axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_TYPE("problem")), axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("problem", user._id))]);
 
-        const taskData = taskRes.data.tasks[0];
-        const submissionData = submissionRes.data.submissions[0];
+        const taskData = taskRes.data.tasks.find((t) => t._id === taskId);
+        const allSubmissions = submissionRes.data.submissions;
+
+        const relevantSubmissions = allSubmissions.filter((sub) => {
+          return sub.task?._id === taskId;
+        });
+
+        if (relevantSubmissions.length === 0) {
+          setTask(taskData);
+          setSubmission(null);
+          return;
+        }
+
+        relevantSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const latestSubmission = relevantSubmissions[0];
 
         setTask(taskData);
-        setSubmission(submissionData);
+        setSubmission(latestSubmission);
       } catch (error) {
         console.error("❌ Error fetching data:", error);
       } finally {

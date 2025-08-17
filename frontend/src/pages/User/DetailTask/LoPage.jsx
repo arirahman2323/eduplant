@@ -13,62 +13,71 @@ const LoPage = () => {
   const navigate = useNavigate();
   const [task, setTask] = useState(null);
   const [answers, setAnswers] = useState({});
+  const [essayAnswers, setEssayAnswers] = useState({});
   const [submission, setSubmission] = useState(null);
   const { user } = useContext(UserContext);
 
-  useEffect(() => {
-    const getTask = async () => {
-      try {
-        const res = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(id));
-        setTask(res.data);
-      } catch (e) {
-        console.error("Error loading task:", e);
-      }
-    };
+  const getTaskAndSubmission = async () => {
+    if (!user?._id) return;
+    try {
+      const taskRes = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(id));
+      setTask(taskRes.data);
 
-    const getSubmission = async () => {
-      try {
-        const res = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("lo", user._id));
-        const data = res.data.submissions.find((s) => s.task._id === id);
-        if (data) {
-          setSubmission(data);
-          const mcq = {};
-          data.multipleChoiceAnswers.forEach((a) => {
-            mcq[a.questionId] = a.selectedOption;
-          });
-          setAnswers(mcq);
-        }
-      } catch (err) {
-        console.error("Error fetching submission:", err);
-      }
-    };
+      const subRes = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("lo", user._id));
+      const userSubmissions = (subRes.data?.submissions || []).filter((s) => s.task._id === id);
 
-    if (user?._id) {
-      getTask();
-      getSubmission();
+      if (userSubmissions.length > 0) {
+        const latestSubmission = userSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        setSubmission(latestSubmission);
+
+        const mcq = {};
+        (latestSubmission.multipleChoiceAnswers || []).forEach((a) => {
+          mcq[a.questionId] = a.selectedOption;
+        });
+        setAnswers(mcq);
+
+        const essay = {};
+        (latestSubmission.essayAnswers || []).forEach((a) => {
+          essay[a.questionId] = a.answer;
+        });
+        setEssayAnswers(essay);
+      }
+    } catch (e) {
+      console.error("Error loading data:", e);
+      toast.error("Gagal memuat data.");
     }
+  };
+
+  useEffect(() => {
+    getTaskAndSubmission();
   }, [id, user?._id]);
 
   const handleMCQChange = (qId, opt) => {
-    if (submission) return;
     setAnswers((prev) => ({ ...prev, [qId]: opt }));
+  };
+
+  const handleEssayChange = (qId, val) => {
+    setEssayAnswers((prev) => ({ ...prev, [qId]: val }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!task || submission) return;
+    if (!task) return;
+
+    if (submission) {
+      const isConfirmed = window.confirm("Mengirim ulang akan membuat lembar jawaban baru dan nilai sebelumnya tidak berlaku lagi hingga dinilai kembali oleh guru. Lanjutkan?");
+      if (!isConfirmed) return;
+    }
 
     const payload = {
-      multipleChoiceAnswers: Object.entries(answers).map(([questionId, selectedOption]) => ({
-        questionId,
-        selectedOption,
-      })),
+      multipleChoiceAnswers: Object.entries(answers).map(([questionId, selectedOption]) => ({ questionId, selectedOption })),
+      essayAnswers: Object.entries(essayAnswers).map(([questionId, answer]) => ({ questionId, answer })),
     };
 
     try {
       const res = await axiosInstance.post(API_PATHS.TASKS.POST_SUBMISSION_BY_TASK_ID("lo", id), payload);
       toast.success("Jawaban berhasil dikirim!");
-      setSubmission(res.data.submission);
+      await getTaskAndSubmission();
     } catch (err) {
       toast.error("Gagal mengirim jawaban");
       console.error("Error submitting answers:", err.response?.data.message || err.message);
@@ -88,43 +97,56 @@ const LoPage = () => {
           <div className="bg-white p-4 rounded-lg shadow mb-6">
             <h2 className="text-xl font-semibold">{task.title}</h2>
             <p className="text-gray-600">{task.description}</p>
-            <p className="mt-4 text-sm text-black">{task.multipleChoiceQuestions?.length || 0} Soal</p>
+            <p className="mt-4 text-sm text-black">{(task.multipleChoiceQuestions?.length || 0) + (task.essayQuestions?.length || 0)} Soal</p>
             <div className="mt-2 h-2 bg-blue-500 rounded-full"></div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {task.multipleChoiceQuestions?.map((q, i) => (
-              <div key={q._id} className="bg-white p-4 rounded-lg shadow mb-4">
-                <p className="font-semibold mb-2">{q.question}</p>
-
-                {/* Label opsi di atas */}
-                <div className="grid grid-cols-5 text-sm font-medium text-gray-700 mb-2 text-center">
-                  {q.options.map((opt, idx) => (
-                    <div key={idx}>{opt}</div>
-                  ))}
-                </div>
-
-                {/* Radio button horizontal */}
-                <div className="grid grid-cols-5 gap-2 text-center">
-                  {q.options.map((opt, idx) => (
-                    <div key={idx}>
-                      <input
-                        type="radio"
-                        name={q._id}
-                        value={opt}
-                        checked={answers[q._id] === opt}
-                        onChange={() => handleMCQChange(q._id, opt)}
-                        disabled={!!submission}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 cursor-pointer"
-                      />
+            {task.multipleChoiceQuestions && task.multipleChoiceQuestions.length > 0 && (
+              <div className="bg-white p-4 rounded-lg shadow">
+                <h3 className="text-xl font-semibold mb-4">Kuisioner</h3>
+                {task.multipleChoiceQuestions.map((q) => (
+                  <div key={q._id} className="mb-6 border-t pt-4">
+                    <p className="font-semibold mb-2">{q.question}</p>
+                    <div className="grid grid-cols-5 text-sm font-medium text-gray-700 mb-2 text-center">
+                      {q.options.map((opt, idx) => (
+                        <div key={idx}>{opt}</div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                    <div className="grid grid-cols-5 gap-2 text-center">
+                      {q.options.map((opt, idx) => (
+                        <div key={idx}>
+                          <input type="radio" name={q._id} value={opt} checked={answers[q._id] === opt} onChange={() => handleMCQChange(q._id, opt)} className="h-4 w-4" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
 
-            <button type="submit" disabled={!!submission} className={`w-full ${submission ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"} text-lg text-white py-2.5 rounded-md transition cursor-pointer`}>
-              {submission ? "Sudah Dikirim" : "Kumpulkan"}
+            {task.essayQuestions && task.essayQuestions.length > 0 && (
+              <div className="bg-white p-4 rounded-lg shadow">
+                <h3 className="text-xl font-semibold mb-4">Angket</h3>
+                {task.essayQuestions.map((q, i) => (
+                  <div key={q._id} className="mb-6 border-t pt-4">
+                    <h3 className="font-semibold mb-2">Pertanyaan {i + 1}</h3>
+                    <p className="mb-2">{q.question}</p>
+                    <textarea
+                      name={q._id}
+                      value={essayAnswers[q._id] || ""}
+                      onChange={(e) => handleEssayChange(q._id, e.target.value)}
+                      className="w-full border-2 border-gray-300 rounded px-3 py-2"
+                      rows={4}
+                      placeholder="Isi jawaban Anda..."
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-lg text-white py-2.5 rounded-md">
+              {submission ? "Kirim Ulang Jawaban" : "Kumpulkan"}
             </button>
             <button
               type="button"

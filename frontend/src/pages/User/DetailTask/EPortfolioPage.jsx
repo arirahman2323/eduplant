@@ -7,6 +7,10 @@ import { HiChevronLeft } from "react-icons/hi";
 import { API_PATHS } from "../../../utils/apiPaths";
 import toast from "react-hot-toast";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js";
+import { Line } from "react-chartjs-2";
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const EPortfolioPage = () => {
   const { user } = useContext(UserContext);
@@ -14,6 +18,7 @@ const EPortfolioPage = () => {
   const [data, setData] = useState(null);
   const [averageScore, setAverageScore] = useState(null);
   const [loadingDownload, setLoadingDownload] = useState(false);
+  const [chartData, setChartData] = useState({ datasets: [] });
   const navigate = useNavigate();
   const location = useLocation();
   const taskId = location.state?.taskId;
@@ -22,12 +27,76 @@ const EPortfolioPage = () => {
   const fetchData = async () => {
     try {
       const res = await axiosInstance.get(`/api/tasks/full-submissions/${userId}`);
-      setData(res.data);
+      const rawData = res.data;
 
-      const scores = [...(res.data.taskSubmissions || []), ...(res.data.mindmapSubmissions || [])].map((item) => item.score).filter((s) => typeof s === "number");
+      const combinedSubmissions = [...(rawData.taskSubmissions || []), ...(rawData.mindmapSubmissions || [])];
 
+      const taskOrder = [
+        "pretest",
+        "ownership 1",
+        "kreatif 1",
+        "orient students",
+        "organize",
+        "mindmap",
+        "materi",
+        "ownership 2",
+        "kreatif 2",
+        "assist",
+        "develop",
+        "analyze",
+        "ownership 3",
+        "kreatif 3",
+        "postest",
+        "refleksi",
+        "ownership 4",
+        "kreatif 4",
+        "e-portfolio",
+      ];
+
+      const getTaskOrderIndex = (submission) => {
+        const title = submission.task?.title || submission.type || "";
+        const lowerTitle = title.toLowerCase();
+        for (let i = 0; i < taskOrder.length; i++) {
+          if (lowerTitle.includes(taskOrder[i])) return i;
+        }
+        return taskOrder.length;
+      };
+
+      const sortedSubmissions = combinedSubmissions.sort((a, b) => getTaskOrderIndex(a) - getTaskOrderIndex(b));
+
+      setData({
+        ...rawData,
+        taskSubmissions: sortedSubmissions.filter((s) => s.task),
+        mindmapSubmissions: sortedSubmissions.filter((s) => !s.task && s.type === "mindmap"),
+      });
+
+      const scores = sortedSubmissions.map((item) => item.score).filter((s) => typeof s === "number");
       const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
       setAverageScore(avg.toFixed(2));
+
+      const loScores = sortedSubmissions.filter((s) => s.task?.title.toLowerCase().includes("ownership")).map((s) => s.score);
+
+      const kbkScores = sortedSubmissions.filter((s) => s.task?.title.toLowerCase().includes("kreatif")).map((s) => s.score);
+
+      setChartData({
+        labels: ["Attempt 1", "Attempt 2", "Attempt 3", "Attempt 4"],
+        datasets: [
+          {
+            label: "Learning Ownership (LO)",
+            data: loScores,
+            borderColor: "rgb(136, 132, 216)",
+            backgroundColor: "rgba(136, 132, 216, 0.5)",
+            tension: 0.1,
+          },
+          {
+            label: "Berpikir Kreatif (KBK)",
+            data: kbkScores,
+            borderColor: "rgb(130, 202, 157)",
+            backgroundColor: "rgba(130, 202, 157, 0.5)",
+            tension: 0.1,
+          },
+        ],
+      });
     } catch (err) {
       console.error("Gagal mengambil data e-portofolio:", err);
     }
@@ -82,6 +151,22 @@ const EPortfolioPage = () => {
   };
 
   if (!data || !user) return <div className="text-center mt-10">Loading...</div>;
+  const allSubmissionsForTable = [...(data.taskSubmissions || []), ...(data.mindmapSubmissions || [])];
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top",
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 100,
+      },
+    },
+  };
 
   return (
     <DashboardLayout activeMenu="Courses">
@@ -142,6 +227,11 @@ const EPortfolioPage = () => {
                     </tr>
                   </tbody>
                 </table>
+                {/* --- TAMBAHAN: Grafik Line Chart --- */}
+                <div className="mt-12">
+                  <h2 className="text-3xl font-bold mb-6 text-center">Grafik Perkembangan Nilai</h2>
+                  <Line options={chartOptions} data={chartData} />
+                </div>
               </div>
 
               {/* Jawaban */}

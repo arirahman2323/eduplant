@@ -32,6 +32,14 @@ router.get("/user-dashboard-data", protect, getUserDashboardData);
 router.get("/", protect, getTasks);
 router.get("/:id", protect, getTaskById);
 
+// Update task questions only
+router.put("/pretest/:id", protect, updateTaskQuestionsOnly);
+router.put("/posttest/:id", protect, updateTaskQuestionsOnly);
+router.put("/problem/:id", protect, updateTaskQuestionsOnly);
+router.put("/refleksi/:id", protect, updateTaskQuestionsOnly);
+router.put("/lo/:id", protect, updateTaskQuestionsOnly);
+router.put("/kbk/:id", protect, updateTaskQuestionsOnly);
+
 // Task modification
 router.put("/:id", protect, updateTask);
 router.delete("/:id", protect, adminOnly, deleteTask);
@@ -46,14 +54,6 @@ router.post("/refleksi", protect, upload.array("files"), createTask);
 router.post("/lo", protect, upload.array("files"), createTask);
 router.post("/kbk", protect, upload.array("files"), createTask);
 
-// Update task questions only
-router.put("/pretest/:id", protect, updateTaskQuestionsOnly);
-router.put("/posttest/:id", protect, updateTaskQuestionsOnly);
-router.put("/problem/:id", protect, updateTaskQuestionsOnly);
-router.put("/refleksi/:id", protect, updateTaskQuestionsOnly);
-router.put("/lo/:id", protect, updateTaskQuestionsOnly);
-router.put("/kbk/:id", protect, updateTaskQuestionsOnly);
-
 // Filter task by type
 router.get("/type/:type", protect, getTasksByType);
 
@@ -63,17 +63,12 @@ router.get("/:taskId/problem/:problemId/group", protect, async (req, res) => {
     const task = await Task.findById(req.params.taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    const problemItem = task.problem.find(
-      (p) => p._id.toString() === req.params.problemId
-    );
+    const problemItem = task.problem.find((p) => p._id.toString() === req.params.problemId);
     if (!problemItem || !problemItem.groupId) {
       return res.status(404).json({ message: "Group for this problem not found" });
     }
 
-    const group = await Group.findById(problemItem.groupId).populate(
-      "members",
-      "name email profileImageUrl"
-    );
+    const group = await Group.findById(problemItem.groupId).populate("members", "name email profileImageUrl");
     if (!group) return res.status(404).json({ message: "Group not found" });
 
     res.json(group);

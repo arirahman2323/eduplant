@@ -94,7 +94,7 @@ const App = () => {
               <Route path="/admin/create-task/problem" element={<ProblemAdmin />} />
               <Route path="/admin/list-answer/problem/:taskId" element={<ProblemListAnswer />} />
               <Route path="/admin/edit-problem/:problemId" element={<EditProblemByGroup />} />
-              <Route path="/admin/answer/problem/:userId" element={<ProblemAnswerDetail />} />
+              <Route path="/admin/answer/problem/:taskId/:userId" element={<ProblemAnswerDetail />} />
 
               {/* Mindmap */}
               <Route path="/admin/create-task/mindmap" element={<MindmapAdmin />} />

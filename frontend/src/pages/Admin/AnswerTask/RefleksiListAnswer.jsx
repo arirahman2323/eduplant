@@ -13,7 +13,18 @@ const RefleksiListAnswer = () => {
   const getUserAnswers = async () => {
     try {
       const res = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_TASK_ID(taskId));
-      setAnswers(res.data.submissions || []);
+      const allSubmissions = res.data.submissions || [];
+
+      const latestAnswers = new Map();
+      allSubmissions.forEach((submission) => {
+        if (submission.user && submission.user._id) {
+          const userId = submission.user._id;
+          if (!latestAnswers.has(userId) || new Date(submission.createdAt) > new Date(latestAnswers.get(userId).createdAt)) {
+            latestAnswers.set(userId, submission);
+          }
+        }
+      });
+      setAnswers(Array.from(latestAnswers.values()));
     } catch (error) {
       console.error("Gagal mengambil data jawaban:", error);
     }
@@ -26,7 +37,7 @@ const RefleksiListAnswer = () => {
   return (
     <DashboardLayout activeMenu="Manage Courses">
       <div className="max-w-6xl mt-4 mx-auto">
-        <button onClick={() => navigate(-1)} className="flex items-center mb-2 text-blue-600 hover:underline cursor-pointer">
+        <button onClick={() => navigate("/admin/tasks")} className="flex items-center mb-2 text-blue-600 hover:underline cursor-pointer">
           <HiChevronLeft className="mr-1" /> Kembali
         </button>
       </div>

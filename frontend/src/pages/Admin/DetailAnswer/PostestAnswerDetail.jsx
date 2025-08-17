@@ -21,12 +21,13 @@ const PostestAnswerDetail = () => {
       try {
         // Ambil submission berdasarkan user dan jenis postest
         const submissionRes = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("postest", userId));
-        const submissionData = submissionRes.data.submissions[0];
-
-        if (!submissionData) {
+        const allSubmissions = submissionRes.data.submissions;
+        if (allSubmissions.length === 0) {
           toast.error("Data jawaban tidak ditemukan");
           return;
         }
+        // Urutkan dan ambil jawaban yang paling baru
+        const submissionData = allSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
 
         setSubmission(submissionData);
         setTaskId(submissionData.task._id);
@@ -39,23 +40,27 @@ const PostestAnswerDetail = () => {
         // Inisialisasi nilai essay
         const essayInit = {};
         taskData?.essayQuestions?.forEach((q) => {
-          essayInit[q._id] = 0;
+          const submittedAnswer = submissionData.essayAnswers.find((a) => a.questionId?.toString() === q._id?.toString());
+          essayInit[q._id] = submittedAnswer?.score || 0;
         });
         setEssayScores(essayInit);
 
-        // Hitung skor pilihan ganda
-        const totalMCQ = taskData?.multipleChoiceQuestions?.length || 0;
-        let mcqScore = 0;
-        if (totalMCQ > 0) {
-          const correctMCQ = submissionData.multipleChoiceAnswers.filter((ans) => {
-            const q = taskData.multipleChoiceQuestions.find((q) => q._id === ans.questionId);
-            return q && q.answer === ans.selectedOption;
-          }).length;
-          mcqScore = (correctMCQ / totalMCQ) * 100;
+        // Prioritaskan skor total yang sudah ada di database
+        if (submissionData.score !== null && submissionData.score !== undefined) {
+          setScore(submissionData.score);
+        } else {
+          const totalMCQ = taskData?.multipleChoiceQuestions?.length || 0;
+          let mcQScore = 0;
+          if (totalMCQ > 0) {
+            const correctMCQ = submissionData.multipleChoiceAnswers.filter((ans) => {
+              const q = taskData.multipleChoiceQuestions.find((q) => q._id === ans.questionId);
+              return q && q.answer === ans.selectedOption;
+            }).length;
+            mcQScore = (correctMCQ / totalMCQ) * 100;
+          }
+          const finalScore = calculateFinalScore(essayInit, mcQScore, taskData);
+          setScore(Math.round(finalScore));
         }
-
-        const finalScore = calculateFinalScore(essayInit, mcqScore, taskData);
-        setScore(Math.round(finalScore));
       } catch (err) {
         toast.error("Gagal memuat data jawaban siswa");
       }
@@ -103,7 +108,7 @@ const PostestAnswerDetail = () => {
 
     try {
       setIsSubmitting(true);
-      await axiosInstance.post(API_PATHS.TASKS.POST_SUBMISSION_SCORE("postest", taskId, userId), { score });
+      await axiosInstance.put(API_PATHS.TASKS.POST_SUBMISSION_SCORE("postest", taskId, userId), { score });
       navigate(`/admin/list-answer/postest/${taskId}`);
       toast.success("Nilai berhasil disimpan");
     } catch (err) {

@@ -24,6 +24,8 @@ const UserProvider = ({ children }) => {
         setUser(response.data);
       } catch (error) {
         console.error("User not authenticated", error);
+        setUser(null);
+        window.location.href = "/login";
       } finally {
         setLoading(false);
       }

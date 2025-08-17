@@ -7,7 +7,7 @@ import { API_PATHS } from "../../../utils/apiPaths";
 import { HiChevronLeft } from "react-icons/hi";
 
 const ProblemAnswerDetail = () => {
-  const { userId } = useParams();
+  const { taskId, userId } = useParams();
   const navigate = useNavigate();
 
   const [score, setScore] = useState(0);
@@ -23,16 +23,27 @@ const ProblemAnswerDetail = () => {
     const fetchData = async () => {
       try {
         const submissionRes = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("problem", userId));
-        const submissionData = submissionRes.data.submissions[0];
+        const allSubmissions = submissionRes.data.submissions;
 
-        if (!submissionData) {
+        const relevantSubmissions = allSubmissions.filter((sub) => sub.task?._id === taskId);
+
+        if (relevantSubmissions.length === 0) {
+          toast.error("Data jawaban untuk tugas ini tidak ditemukan.");
+          return;
+        }
+
+        relevantSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const latestSubmission = relevantSubmissions[0];
+        console.log(latestSubmission);
+        if (!latestSubmission) {
           toast.error("Data jawaban tidak ditemukan");
           return;
         }
 
-        setSubmission(submissionData);
+        setSubmission(latestSubmission);
 
-        const taskRes = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(submissionData.task._id));
+        const taskRes = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(latestSubmission.task._id));
         const taskData = taskRes.data;
         setTask(taskData);
 
@@ -41,7 +52,7 @@ const ProblemAnswerDetail = () => {
         const chatMessages = {};
 
         await Promise.all(
-          submissionData.problemAnswer?.map(async (a) => {
+          latestSubmission.problemAnswer?.map(async (a) => {
             initScores[a.questionId] = 0;
             try {
               const resGroup = await axiosInstance.get(`/api/groups/problem/${a.questionId}`);

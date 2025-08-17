@@ -26,7 +26,7 @@ const ProblemListAnswer = () => {
   return (
     <DashboardLayout activeMenu="Manage Courses">
       <div className="max-w-6xl mt-4 mx-auto">
-        <button onClick={() => navigate(-1)} className="flex items-center mb-2 text-blue-600 hover:underline cursor-pointer">
+        <button onClick={() => navigate("/admin/tasks")} className="flex items-center mb-2 text-blue-600 hover:underline cursor-pointer">
           <HiChevronLeft className="mr-1" /> Kembali
         </button>
       </div>
@@ -56,7 +56,7 @@ const ProblemListAnswer = () => {
                     <td className="p-3">{answer.user?.email}</td>
                     <td className="p-3">{answer.score ?? "-"}</td>
                     <td className="p-3">
-                      <button onClick={() => navigate(`/admin/answer/problem/${answer.user._id}`)} className="text-blue-600 hover:underline cursor-pointer">
+                      <button onClick={() => navigate(`/admin/answer/problem/${taskId}/${answer.user._id}`)} className="text-blue-600 hover:underline cursor-pointer">
                         Lihat & Nilai
                       </button>
                     </td>
