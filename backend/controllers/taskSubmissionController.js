@@ -10,56 +10,51 @@ const submitTaskAnswer = async (req, res) => {
     let {
       essayAnswers = [],
       multipleChoiceAnswers = [],
-      problemAnswer = [], // <- Tambahan baru
+      problemAnswer = [],
     } = req.body;
 
     const userId = req.user._id;
 
-    if (type !== "pretest" && type !== "postest" && type !== "problem" && type !== "refleksi" && type !== "lo" && type !== "kbk") {
-      return res.status(400).json({ message: "Type must be 'pretest', 'postest', 'problem', 'refleksi, 'lo', or 'kbk'" });
+    // ✅ Validasi type
+    const validTypes = ["pretest", "postest", "problem", "refleksi", "lo", "kbk"];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({ message: "Invalid task type" });
     }
 
     const task = await Task.findById(taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    if (type === "pretest" && !task.isPretest) {
-      return res.status(400).json({ message: "This task is not marked as a pretest" });
-    }
-    if (type === "postest" && !task.isPostest) {
-      return res.status(400).json({ message: "This task is not marked as a postest" });
-    }
-    if (type === "problem" && !task.isProblem) {
-      return res.status(400).json({ message: "This task is not marked as a problem" });
-    }
-    if (type === "refleksi" && !task.isRefleksi) {
-      return res.status(400).json({ message: "This task is not marked as a problem" });
-    }
-    if (type === "lo" && !task.isLo) {
-      return res.status(400).json({ message: "This task is not marked as a LO" });
-    }
-    if (type === "kbk" && !task.isKbk) {
-      return res.status(400).json({ message: "This task is not marked as a KBK" });
-    }
+    // ✅ File global (kalau ada)
+    const globalFiles = req.files
+      ?.filter((file) => file.fieldname === "files") // hanya yang fieldname=files
+      .map((file) => `${req.protocol}://${req.get("host")}/uploads/${file.filename}`) || [];
 
-    // const alreadySubmitted = await TaskSubmission.findOne({ task: taskId, user: userId });
-    // if (alreadySubmitted) {
-    //   return res.status(400).json({ message: "You have already submitted this task" });
-    // }
-
-    // Ambil file PDF dari req.files
-    const pdfFiles = req.files?.map((file) => `${req.protocol}://${req.get("host")}/uploads/${file.filename}`) || [];
-
-    // Handle problem answers
+    // ✅ Handle problem answers
     if (type === "problem") {
-      problemAnswer = problemAnswer.map((ans) => {
-        const matchedProblem = task.problem.find((p) => p._id.toString() === ans.questionId);
-        if (!matchedProblem) {
-          throw new Error("Invalid problem ID");
-        }
+      // form-data parse JSON string? pastikan problemAnswer berupa array object
+      if (typeof problemAnswer === "string") {
+        problemAnswer = JSON.parse(problemAnswer);
+      }
+
+      problemAnswer = problemAnswer.map((ans, idx) => {
+        const matchedProblem = task.problem.find(
+          (p) => p._id.toString() === ans.questionId
+        );
+        if (!matchedProblem) throw new Error("Invalid problem ID");
+
+        // Ambil file berdasarkan index problemAnswer[0][files], problemAnswer[1][files], dst
+        const relatedFiles = req.files
+          ?.filter((file) => file.fieldname === `problemAnswer[${idx}][files]`)
+          .map(
+            (file) =>
+              `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
+          ) || [];
+
         return {
           questionId: ans.questionId,
           problem: ans.problem,
           groupId: matchedProblem.groupId,
+          files: relatedFiles, // ⬅️ sekarang masuk ke tiap problemAnswer
         };
       });
     }
@@ -69,15 +64,21 @@ const submitTaskAnswer = async (req, res) => {
       user: userId,
       essayAnswers,
       multipleChoiceAnswers,
-      problemAnswer, // <- Disimpan
-      pdfFiles, // <- Disimpan
+      problemAnswer,
+      files: globalFiles, // ⬅️ simpan file global juga
     });
 
-    res.status(201).json({ message: "Task submitted successfully", submission });
+    res.status(201).json({
+      message: "Task submitted successfully",
+      submission,
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+
+
 
 // @desc    Get all task submissions by user ID and task type
 // @route   GET /api/task-submissions/:type/user/:userId

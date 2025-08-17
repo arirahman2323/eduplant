@@ -20,6 +20,7 @@ const problemAnswerSchema = new mongoose.Schema(
     questionId: { type: mongoose.Schema.Types.ObjectId, required: true },
     problem: { type: String, required: true },
     groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group", required: true },
+    files: [{ type: String }],
   },
   { _id: false }
 );
@@ -37,6 +38,7 @@ const taskSubmission = new mongoose.Schema(
 
     // ✅ Tambahan
     problemAnswer: [problemAnswerSchema],
+    files: [{ type: String }],
   },
   { timestamps: true }
 );
