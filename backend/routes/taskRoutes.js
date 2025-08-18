@@ -33,18 +33,12 @@ router.get("/", protect, getTasks);
 router.get("/:id", protect, getTaskById);
 
 // Update task questions only
-router.put("/pretest/:id", protect, updateTaskQuestionsOnly);
-router.put("/posttest/:id", protect, updateTaskQuestionsOnly);
-router.put("/problem/:id", protect, updateTaskQuestionsOnly);
-router.put("/refleksi/:id", protect, updateTaskQuestionsOnly);
-router.put("/lo/:id", protect, updateTaskQuestionsOnly);
-router.put("/kbk/:id", protect, updateTaskQuestionsOnly);
-
-// Task modification
-router.put("/:id", protect, updateTask);
-router.delete("/:id", protect, adminOnly, deleteTask);
-router.put("/:id/status", protect, updateTaskStatus);
-router.put("/:id/todo", protect, updateTaskChecklist);
+router.put("/pretest/:id", protect, upload.array("files"), updateTaskQuestionsOnly);
+router.put("/postest/:id", protect, upload.array("files"), updateTaskQuestionsOnly);
+router.put("/problem/:id", protect, upload.array("files"), updateTaskQuestionsOnly);
+router.put("/refleksi/:id", protect, upload.array("files"), updateTaskQuestionsOnly);
+router.put("/lo/:id", protect, upload.array("files"), updateTaskQuestionsOnly);
+router.put("/kbk/:id", protect, upload.array("files"), updateTaskQuestionsOnly);
 
 // Create task by type (pakai upload)
 router.post("/pretest", protect, upload.array("files"), createTask);
@@ -53,6 +47,12 @@ router.post("/problem", protect, upload.array("files"), createTask);
 router.post("/refleksi", protect, upload.array("files"), createTask);
 router.post("/lo", protect, upload.array("files"), createTask);
 router.post("/kbk", protect, upload.array("files"), createTask);
+
+// Task modification
+router.put("/:id", protect, updateTask);
+router.delete("/:id", protect, adminOnly, deleteTask);
+router.put("/:id/status", protect, updateTaskStatus);
+router.put("/:id/todo", protect, updateTaskChecklist);
 
 // Filter task by type
 router.get("/type/:type", protect, getTasksByType);

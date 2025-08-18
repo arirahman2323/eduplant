@@ -221,6 +221,80 @@ const createTask = async (req, res) => {
   }
 };
 
+// @desc    Update only questions of a task (Admin only)
+// @route   PUT /api/tasks/pretest/:id, /api/tasks/posttest/:id, dll
+// @access  Private (Admin)
+const updateTaskQuestionsOnly = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    const { essayQuestions, multipleChoiceQuestions, problem, title, description, dueDate } = req.body || {};
+
+    // 📌 parse path untuk validasi jenis task
+    const path = req.route.path;
+    if (path.includes("/pretest") && !task.isPretest)
+      return res.status(400).json({ message: "This task is not marked as a pretest" });
+    if (path.includes("/postest") && !task.isPostest)
+      return res.status(400).json({ message: "This task is not marked as a postest" });
+    if (path.includes("/problem") && !task.isProblem)
+      return res.status(400).json({ message: "This task is not marked as a problem" });
+    if (path.includes("/refleksi") && !task.isRefleksi)
+      return res.status(400).json({ message: "This task is not marked as a refleksi" });
+    if (path.includes("/lo") && !task.isLo)
+      return res.status(400).json({ message: "This task is not marked as a LO" });
+    if (path.includes("/kbk") && !task.isKbk)
+      return res.status(400).json({ message: "This task is not marked as a KBK" });
+
+    // ✅ hanya update kalau ada nilai & tidak kosong
+    if (essayQuestions !== undefined && essayQuestions !== "") {
+      task.essayQuestions =
+        typeof essayQuestions === "string" ? JSON.parse(essayQuestions) : essayQuestions;
+    }
+
+    if (multipleChoiceQuestions !== undefined && multipleChoiceQuestions !== "") {
+      task.multipleChoiceQuestions =
+        typeof multipleChoiceQuestions === "string" ? JSON.parse(multipleChoiceQuestions) : multipleChoiceQuestions;
+    }
+
+    if (problem !== undefined && problem !== "") {
+  const newProblems = typeof problem === "string" ? JSON.parse(problem) : problem;
+
+  // merge dengan problem lama → jaga groupId
+    task.problem = newProblems.map((p, idx) => {
+        const old = task.problem[idx];
+        return {
+          ...old?.toObject(),  // keep groupId lama
+          ...p                 // overwrite field problem dari request
+        };
+      });
+    }
+    if (title !== undefined && title !== "") task.title = title;
+    if (description !== undefined && description !== "") task.description = description;
+    if (dueDate !== undefined && dueDate !== "") task.dueDate = dueDate;
+
+    // ✅ handle uploaded files
+    if (req.files && req.files.length > 0) {
+      const uploadedFiles = req.files.map(file =>
+        `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
+      );
+
+      // pisahkan pdf dan image
+      const pdfFiles = uploadedFiles.filter(url => url.toLowerCase().endsWith(".pdf"));
+      const attachments = uploadedFiles.filter(url => !url.toLowerCase().endsWith(".pdf"));
+
+      // merge dengan yang lama
+      task.pdfFiles = [...task.pdfFiles, ...pdfFiles];
+      task.attachments = [...task.attachments, ...attachments];
+    }
+
+    const updatedTask = await task.save();
+    res.json({ message: "Questions updated successfully", task: updatedTask });
+  } catch (error) {
+    console.error("updateTaskQuestionsOnly error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
 // @desc    Update task details
 // @route   PUT /api/tasks/:id
@@ -256,81 +330,7 @@ const updateTask = async (req, res) => {
   console.log("Updated Title:", task.title);
 };
 
-// @desc    Update only questions of a task (Admin only)
-// @route   PUT /api/tasks/pretest/:id, /api/tasks/posttest/:id
-// @access  Private (Admin)
-const updateTaskQuestionsOnly = async (req, res) => {
-  try {
-    const task = await Task.findById(req.params.id);
 
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-
-    const { essayQuestions, multipleChoiceQuestions, problem, title, description, dueDate } = req.body;
-
-    const path = req.route.path;
-    const isPretest = path.includes("/pretest");
-    const isPostest = path.includes("/postest");
-    const isProblem = path.includes("/problem");
-    const isRefleksi = path === "/refleksi";
-    const isLo = path === "/lo";
-    const isKbk = path === "/kbk";
-
-    if (isPretest && !task.isPretest) {
-      return res.status(400).json({ message: "This task is not marked as a pretest" });
-    }
-
-    if (isPostest && !task.isPostest) {
-      return res.status(400).json({ message: "This task is not marked as a postest" });
-    }
-
-    if (isProblem && !task.isProblem) {
-      return res.status(400).json({ message: "This task is not marked as a problem" });
-    }
-
-    if (isRefleksi && !task.isRefleksi) {
-      return res.status(400).json({ message: "This task is not marked as a refleksi" });
-    }
-
-    if (isLo && !task.isLo) {
-      return res.status(400).json({ message: "This task is not marked as a LO" });
-    }
-
-    if (isKbk && !task.isKbk) {
-      return res.status(400).json({ message: "This task is not marked as a KBK" });
-    }
-
-    if (essayQuestions !== undefined) {
-      task.essayQuestions = essayQuestions;
-    }
-
-    if (multipleChoiceQuestions !== undefined) {
-      task.multipleChoiceQuestions = multipleChoiceQuestions;
-    }
-
-    if (problem !== undefined) {
-      task.problem = problem;
-    }
-
-    if (title !== undefined) {
-      task.title = title;
-    }
-
-    if (description !== undefined) {
-      task.description = description;
-    }
-
-    if (dueDate !== undefined) {
-      task.dueDate = dueDate;
-    }
-
-    const updatedTask = await task.save();
-    res.json({ message: "Questions updated successfully", task: updatedTask });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
 
 // @desc Delete task (admin only)
 // @route DELETE /api/tasks/:id
