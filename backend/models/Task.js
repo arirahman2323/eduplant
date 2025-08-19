@@ -28,6 +28,7 @@ const problemSchema = new mongoose.Schema(
     _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
     problem: { type: String },
     groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group" },
+    pdfFiles: [{ type: String }],
   },
   { _id: false }
 );
@@ -41,7 +42,7 @@ const taskSchema = new mongoose.Schema(
     assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     attachments: [{ type: String }],
-    pdfFiles: [{ type: String }],
+    
     todoChecklist: [todoSchema],
     progress: { type: Number, default: 0 },
     essayQuestions: [essaySchema],
