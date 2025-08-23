@@ -3,18 +3,13 @@ const router = express.Router();
 const upload = require("../middlewares/uploadMiddleware");
 const { protect, adminOnly } = require("../middlewares/authMiddleware");
 
-const { submitTaskAnswer, 
-    getSubmissionsByUser, 
-    getAllSubmissions, 
-    updateEssayScoresByUserType, 
-    getSubmissionsByTask, 
-    updateTotalScore } = require("../controllers/taskSubmissionController");
+const { submitTaskAnswer, getSubmissionsByUser, getAllSubmissions, updateEssayScoresByUserType, getSubmissionsByTask, updateTotalScore } = require("../controllers/taskSubmissionController");
 
 // Task Submission Routes
 router.post(
   "/:type/:taskId",
   protect,
-  upload.any(), // ✅ terima semua field + file
+  upload.array("files", 11), // ✅ terima semua field + file
   submitTaskAnswer
 );
 // get submissions by user
@@ -26,6 +21,6 @@ router.post("/score-essay/:type/:userId", protect, adminOnly, updateEssayScoresB
 // get submissions by task
 router.get("/task/:taskId", protect, adminOnly, getSubmissionsByTask);
 // Update total score of a submission
-router.put("/:type/:taskId/score/:userId", protect, adminOnly,upload.single("feedbackFile"),updateTotalScore);
+router.put("/:type/:taskId/score/:userId", protect, adminOnly, upload.single("feedbackFile"), updateTotalScore);
 
 module.exports = router;

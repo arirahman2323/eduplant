@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 const { PDFDocument } = require("pdf-lib");
 const fs = require("fs/promises");
 const path = require("path");
-
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const Task = require("../models/Task");
 const TaskSubmission = require("../models/TaskSubmission");
@@ -131,30 +131,18 @@ const getTaskById = async (req, res) => {
 // @access  Private (Admin)
 const createTask = async (req, res) => {
   try {
-    const {
-      title,
-      description,
-      priority,
-      dueDate,
-      assignedTo = [],
-      todoChecklist,
-      essayQuestions = [],
-      multipleChoiceQuestions = [],
-      problem = []
-    } = req.body;
+    const { title, description, priority, dueDate, assignedTo = [], todoChecklist, essayQuestions = [], multipleChoiceQuestions = [], problem = [] } = req.body;
 
     if (!Array.isArray(assignedTo)) {
       return res.status(400).json({ message: "Assigned to must be an array of user IDs" });
     }
 
     // ⬇️ TETAP: pakai req.files apa adanya (tanpa ubah penamaan)
-    const uploadedFiles = req.files?.map(file =>
-      `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
-    ) || [];
+    const uploadedFiles = req.files?.map((file) => `${req.protocol}://${req.get("host")}/uploads/${file.filename}`) || [];
 
     // ⬇️ TETAP: pisahkan PDF & non-PDF
-    const pdfFiles = uploadedFiles.filter(url => url.toLowerCase().endsWith(".pdf"));
-    const attachments = uploadedFiles.filter(url => !url.toLowerCase().endsWith(".pdf"));
+    const pdfFiles = uploadedFiles.filter((url) => url.toLowerCase().endsWith(".pdf"));
+    const attachments = uploadedFiles.filter((url) => !url.toLowerCase().endsWith(".pdf"));
 
     // ⬇️ TETAP: deteksi tipe task
     const path = req.route.path;
@@ -168,16 +156,14 @@ const createTask = async (req, res) => {
     // ⬇️ TETAP: hapus kunci jawaban utk LO/KBK
     let processedMCQ = multipleChoiceQuestions;
     if (isLo || isKbk) {
-      processedMCQ = multipleChoiceQuestions.map(q => ({
+      processedMCQ = multipleChoiceQuestions.map((q) => ({
         question: q.question,
         options: q.options,
       }));
     }
 
     // ✅ BARU: siapkan problem + slot pdfFiles
-    const problemsWithPdf = Array.isArray(problem)
-      ? problem.map(p => ({ ...p, pdfFiles: [] }))
-      : [];
+    const problemsWithPdf = Array.isArray(problem) ? problem.map((p) => ({ ...p, pdfFiles: [] })) : [];
 
     // ✅ BARU: distribusi PDF → problem berdasar urutan (round-robin)
     if (problemsWithPdf.length > 0 && pdfFiles.length > 0) {
@@ -241,29 +227,16 @@ const updateTaskQuestionsOnly = async (req, res) => {
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    const {
-      essayQuestions,
-      multipleChoiceQuestions,
-      problem,
-      title,
-      description,
-      dueDate
-    } = req.body || {};
+    const { essayQuestions, multipleChoiceQuestions, problem, title, description, dueDate, problemId } = req.body || {};
 
     // --- Validasi tipe sesuai path ---
     const path = req.route.path;
-    if (path.includes("/pretest") && !task.isPretest)
-      return res.status(400).json({ message: "This task is not marked as a pretest" });
-    if (path.includes("/postest") && !task.isPostest)
-      return res.status(400).json({ message: "This task is not marked as a postest" });
-    if (path.includes("/problem") && !task.isProblem)
-      return res.status(400).json({ message: "This task is not marked as a problem" });
-    if (path.includes("/refleksi") && !task.isRefleksi)
-      return res.status(400).json({ message: "This task is not marked as a refleksi" });
-    if (path.includes("/lo") && !task.isLo)
-      return res.status(400).json({ message: "This task is not marked as a LO" });
-    if (path.includes("/kbk") && !task.isKbk)
-      return res.status(400).json({ message: "This task is not marked as a KBK" });
+    if (path.includes("/pretest") && !task.isPretest) return res.status(400).json({ message: "This task is not marked as a pretest" });
+    if (path.includes("/postest") && !task.isPostest) return res.status(400).json({ message: "This task is not marked as a postest" });
+    if (path.includes("/problem") && !task.isProblem) return res.status(400).json({ message: "This task is not marked as a problem" });
+    if (path.includes("/refleksi") && !task.isRefleksi) return res.status(400).json({ message: "This task is not marked as a refleksi" });
+    if (path.includes("/lo") && !task.isLo) return res.status(400).json({ message: "This task is not marked as a LO" });
+    if (path.includes("/kbk") && !task.isKbk) return res.status(400).json({ message: "This task is not marked as a KBK" });
 
     // --- Update fields dasar (jika ada) ---
     if (title !== undefined && title !== "") task.title = title;
@@ -272,120 +245,42 @@ const updateTaskQuestionsOnly = async (req, res) => {
 
     // --- Essay ---
     if (essayQuestions !== undefined && essayQuestions !== "") {
-      task.essayQuestions =
-        typeof essayQuestions === "string" ? JSON.parse(essayQuestions) : essayQuestions;
+      task.essayQuestions = typeof essayQuestions === "string" ? JSON.parse(essayQuestions) : essayQuestions;
     }
 
     // --- MCQ (hapus jawaban untuk LO/KBK) ---
     if (multipleChoiceQuestions !== undefined && multipleChoiceQuestions !== "") {
-      let mcq = typeof multipleChoiceQuestions === "string"
-        ? JSON.parse(multipleChoiceQuestions)
-        : multipleChoiceQuestions;
+      let mcq = typeof multipleChoiceQuestions === "string" ? JSON.parse(multipleChoiceQuestions) : multipleChoiceQuestions;
 
       if (task.isLo || task.isKbk) {
-        mcq = (mcq || []).map(q => ({ question: q.question, options: q.options }));
+        mcq = (mcq || []).map((q) => ({ question: q.question, options: q.options }));
       }
       task.multipleChoiceQuestions = mcq;
     }
 
-    // --- Siapkan array problem lama sebagai plain object ---
-    let problemsArray = task.problem
-      ? task.problem.map(p => (typeof p?.toObject === "function" ? p.toObject() : p))
-      : [];
-
-    // --- Merge problem teks (jaga groupId, abaikan pdfFiles dari client) ---
-    if (problem !== undefined && problem !== "") {
-      const incoming = typeof problem === "string" ? JSON.parse(problem) : problem;
-      const newLen = Array.isArray(incoming) ? incoming.length : 0;
-      const oldLen = problemsArray.length;
-      const maxLen = Math.max(newLen, oldLen);
-
-      const merged = [];
-      for (let i = 0; i < maxLen; i++) {
-        const oldP = problemsArray[i] || {};
-        const newP = incoming[i];
-
-        if (newP) {
-          merged.push({
-            ...oldP,                 // keep groupId, pdfFiles lama
-            ...newP,                 // overwrite text "problem" dsb
-            groupId: oldP.groupId || newP.groupId,
-            pdfFiles: Array.isArray(oldP.pdfFiles) ? oldP.pdfFiles : [], // abaikan pdfFiles dari client
-          });
-        } else if (oldP) {
-          merged.push(oldP); // simpan sisa lama jika tidak dikirim baru
-        }
-      }
-      problemsArray = merged;
-    }
-
-    // --- Strategi PDF: replace (default) | append | clear ---
-    const mode = String(req.body?.pdfMode || req.query?.pdfMode || "replace").toLowerCase();
-
-    // Helper upload
-    const normalizeUploadedFiles = (reqFiles) => {
-      if (!reqFiles) return [];
-      if (Array.isArray(reqFiles)) return reqFiles;
-      const arr = [];
-      for (const k of Object.keys(reqFiles)) {
-        for (const f of (reqFiles[k] || [])) arr.push(f);
-      }
-      return arr;
-    };
-    const makeFileURL = (filename) => `${req.protocol}://${req.get("host")}/uploads/${filename}`;
-
-    // Jika mode clear, kosongkan semua pdfFiles meskipun tidak ada upload
-    if (mode === "clear" && problemsArray.length > 0) {
-      problemsArray = problemsArray.map(p => ({ ...p, pdfFiles: [] }));
-    }
-
-    // --- Proses files bila ada ---
-    const rawFiles = normalizeUploadedFiles(req.files)
-      .filter(f => f && typeof f.size === "number" && f.size > 0); // guard kosong
-
-    if (rawFiles.length > 0) {
-      const pdfFiles = rawFiles.filter(f => (f.mimetype || "").toLowerCase() === "application/pdf");
-      const imgFiles = rawFiles.filter(f => (f.mimetype || "").toLowerCase().startsWith("image/"));
-
-      // Gambar/non-PDF → attachments (append + dedup)
-      if (imgFiles.length > 0) {
-        const imageUrls = imgFiles.map(f => makeFileURL(f.filename));
-        task.attachments = Array.from(new Set([...(task.attachments || []), ...imageUrls]));
-      }
-
-      // PDF → ke problem
-      if (pdfFiles.length > 0) {
-        if (problemsArray.length === 0) {
-          // Tidak ada problem → jangan hilang, simpan ke attachments
-          const pdfUrls = pdfFiles.map(f => makeFileURL(f.filename));
-          task.attachments = Array.from(new Set([...(task.attachments || []), ...pdfUrls]));
-        } else {
-          // Prepare pdfFiles per problem
-          if (mode !== "append") {
-            // replace default: kosongkan dulu
-            problemsArray = problemsArray.map(p => ({ ...p, pdfFiles: [] }));
-          } else {
-            // append: pastikan array ada
-            problemsArray = problemsArray.map(p => ({
-              ...p,
-              pdfFiles: Array.isArray(p.pdfFiles) ? p.pdfFiles : []
-            }));
-          }
-
-          // Distribusi round-robin + dedup per problem
-          pdfFiles.forEach((f, i) => {
-            const url = makeFileURL(f.filename);
-            const idx = i % problemsArray.length;
-            if (!problemsArray[idx].pdfFiles.includes(url)) {
-              problemsArray[idx].pdfFiles.push(url);
-            }
-          });
-        }
+    let updatedProblems = task.problem;
+    if (problem) {
+      try {
+        updatedProblems = JSON.parse(problem);
+      } catch (e) {
+        return res.status(400).json({ message: "Invalid problem JSON format" });
       }
     }
 
-    // Simpan problem hasil akhir
-    task.problem = problemsArray;
+    if (req.files && req.files.length > 0) {
+      const problemToUpdate = updatedProblems.find((p) => p._id.toString() === problemId);
+
+      if (problemToUpdate) {
+        const newFileUrls = req.files.map((file) => `${req.protocol}://${req.get("host")}/uploads/${file.filename}`);
+
+        problemToUpdate.pdfFiles = [...(problemToUpdate.pdfFiles || []), ...newFileUrls];
+      } else {
+        console.warn("Menerima file upload tetapi tidak menemukan problemId yang cocok untuk diupdate.");
+      }
+    }
+
+    task.problem = updatedProblems;
+    task.markModified("problem");
 
     const updatedTask = await task.save();
     return res.json({ message: "Questions updated successfully", task: updatedTask });
@@ -396,7 +291,6 @@ const updateTaskQuestionsOnly = async (req, res) => {
 };
 
 module.exports = { updateTaskQuestionsOnly };
-
 
 // @desc    Update task details
 // @route   PUT /api/tasks/:id
@@ -443,7 +337,7 @@ const deleteTask = async (req, res) => {
     }
 
     // Hapus file upload (pdfFiles + attachments)
-    [...task.pdfFiles, ...task.attachments].forEach(fileUrl => {
+    [...task.pdfFiles, ...task.attachments].forEach((fileUrl) => {
       const filePath = path.join(__dirname, "..", "uploads", path.basename(fileUrl));
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -464,7 +358,6 @@ const deleteTask = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 
 // @desc Delete specific question from a task
 // @route DELETE /api/tasks/:taskId/questions/:questionId?type=essay|multipleChoice
@@ -790,18 +683,21 @@ const createEportfolioHtml = (user, submissions, mindmaps, averageScore, allTask
     });
 
     // Problem
-    (submission.task?.problem || [])
-      .filter((p) => submission.problemAnswer?.some((pa) => pa.questionId.toString() === p._id.toString()))
-      .forEach((p) => {
-        const answer = submission.problemAnswer?.find((pa) => pa.questionId.toString() === p._id.toString());
+    (submission.problemAnswer || []).forEach((answer) => {
+      const problemDetail = submission.task?.problem?.find((p) => p._id.toString() === answer.questionId.toString());
+      if (!problemDetail) return;
 
-        const originalIndex = (submission.task?.problem || []).findIndex((orig) => orig._id.toString() === p._id.toString());
+      const originalIndex = submission.task.problem.findIndex((p) => p._id.toString() === answer.questionId.toString());
 
-        taskAnswersHtml += `
-      <p><strong>- Problem Kelompok ${originalIndex + 1}:</strong> <em>${p.problem || "(Soal belum tersedia)"}</em></p>
-      <p style="margin-left: 20px;">Jawaban: ${answer?.problem || "Belum dijawab"}</p>
-    `;
-      });
+      taskAnswersHtml += `
+    <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+        <p><strong>- Problem Kelompok ${originalIndex + 1}:</strong> <em>${problemDetail.problem}</em></p>
+        <p style="margin-left: 20px;">Jawaban Teks: ${answer.problem || "Belum dijawab"}</p>
+        ${answer.discussionFile ? `<p style="margin-left: 20px; font-style: italic; color: gray;">[File Hasil Diskusi tersedia di halaman terakhir]</p>` : ""}
+        ${answer.pdfFiles && answer.pdfFiles.length > 0 ? `<p style="margin-left: 20px; font-style: italic; color: gray;">[File Jawaban tersedia di halaman terakhir]</p>` : ""}
+    </div>
+  `;
+    });
 
     // File feedback info
     if (submission.feedbackFile) {
@@ -943,23 +839,67 @@ const downloadEportfolioAsPdf = async (req, res) => {
     const user = await User.findById(userId).lean();
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Ambil semua submission tugas dan populate detail soal
-    const submissions = await TaskSubmission.find({ user: userId }).populate("task", "title essayQuestions multipleChoiceQuestions problem").lean();
+    const submissions = await TaskSubmission.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(userId) } },
+      { $sort: { createdAt: -1 } },
+      { $group: { _id: "$task", latestSubmission: { $first: "$$ROOT" } } },
+      { $replaceRoot: { newRoot: "$latestSubmission" } },
+    ]);
 
-    // Ambil semua submission mindmap
-    const mindmapSubmissions = await MindmapSubmission.find({ user: userId }).populate("task", "title instructions rubric").lean();
+    const mindmapSubmissions = await MindmapSubmission.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(userId) } },
+      { $sort: { createdAt: -1 } },
+      { $group: { _id: "$task", latestSubmission: { $first: "$$ROOT" } } },
+      { $replaceRoot: { newRoot: "$latestSubmission" } },
+    ]);
 
-    const scores = [...submissions, ...mindmapSubmissions].map((item) => item.score).filter((s) => typeof s === "number");
+    await Task.populate(submissions, { path: "task", select: "title essayQuestions multipleChoiceQuestions problem isPretest isPostest isProblem isRefleksi isLo isKbk" });
+    await Task.populate(mindmapSubmissions, { path: "task", select: "title instructions rubric" });
+
+    // Urutkan semua submission sesuai urutan yang benar
+    const allLatestSubmissions = [...submissions, ...mindmapSubmissions];
+    const taskOrder = [
+      "pretest",
+      "ownership 1",
+      "kreatif 1",
+      "orient",
+      "organize",
+      "mindmap",
+      "materi",
+      "ownership 2",
+      "kreatif 2",
+      "assist",
+      "develop",
+      "analyze",
+      "ownership 3",
+      "kreatif 3",
+      "postest",
+      "refleksi",
+      "ownership 4",
+      "kreatif 4",
+      "e-portfolio",
+    ];
+
+    const getOrderIndex = (sub) => {
+      const title = sub.task?.title?.toLowerCase() || "";
+      for (let i = 0; i < taskOrder.length; i++) {
+        if (title.includes(taskOrder[i])) return i;
+      }
+      return taskOrder.length;
+    };
+    allLatestSubmissions.sort((a, b) => getOrderIndex(a) - getOrderIndex(b));
+
+    const scores = allLatestSubmissions.map((item) => item.score).filter((s) => typeof s === "number");
     const averageScore = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : 0;
 
-    // Buat HTML
+    // Buat HTML dengan data yang sudah diurutkan dan difilter
     const htmlContent = createEportfolioHtml(
       user,
-      submissions,
-      mindmapSubmissions,
+      allLatestSubmissions.filter((s) => s.task?.isProblem || s.task?.isPretest || s.task?.isPostest || s.task?.isRefleksi || s.task?.isLo || s.task?.isKbk),
+      allLatestSubmissions.filter((s) => s.type === "mindmap"),
       averageScore,
-      submissions, // ini allTaskSubmissions
-      mindmapSubmissions
+      allLatestSubmissions.filter((s) => s.task),
+      allLatestSubmissions.filter((s) => !s.task && s.type === "mindmap")
     );
 
     // Convert HTML ke PDF
@@ -976,24 +916,27 @@ const downloadEportfolioAsPdf = async (req, res) => {
     copiedMainPages.forEach((page) => mergedPdf.addPage(page));
 
     const fileUrlsToMerge = [];
-    submissions.forEach((sub) => sub.feedbackFile && fileUrlsToMerge.push(sub.feedbackFile));
-    mindmapSubmissions.forEach((sub) => {
-      sub.rubric?.forEach((r) => r.file && fileUrlsToMerge.push(r.file));
-      if (sub.answerPdf) fileUrlsToMerge.push(sub.answerPdf);
+    allLatestSubmissions.forEach((sub) => {
+      if (sub.feedbackFile) fileUrlsToMerge.push(sub.feedbackFile);
+      if (sub.answerPdf) fileUrlsToMerge.push(sub.answerPdf); // Untuk mindmap
+      (sub.problemAnswer || []).forEach((ans) => {
+        if (ans.discussionFile) fileUrlsToMerge.push(ans.discussionFile);
+        if (ans.pdfFiles) fileUrlsToMerge.push(...ans.pdfFiles);
+      });
     });
 
     for (const fileUrl of fileUrlsToMerge) {
       try {
-        const decodedPathname = decodeURIComponent(new URL(fileUrl).pathname);
-        const filename = path.basename(decodedPathname);
-        const localPath = path.join(__dirname, "..", "uploads", filename);
+        const filename = path.basename(decodeURIComponent(new URL(fileUrl).pathname));
+        const localPath = path.join(process.cwd(), "uploads", filename);
 
         const fileBytes = await fs.readFile(localPath);
         const pdfToMerge = await PDFDocument.load(fileBytes);
+
         const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
         copiedPages.forEach((page) => mergedPdf.addPage(page));
       } catch (err) {
-        console.warn(`Gagal membaca file ${fileUrl}: ${err.message}`);
+        console.warn(`Gagal membaca atau menggabungkan file ${fileUrl}: ${err.message}`);
       }
     }
 

@@ -3,7 +3,7 @@ import { UserContext } from "../../../context/userContext";
 import axiosInstance from "../../../utils/axiosInstance";
 import { API_PATHS } from "../../../utils/apiPaths";
 import DashboardLayout from "../../../components/layouts/DashboardLayout";
-import { HiChevronLeft } from "react-icons/hi";
+import { HiChevronLeft, HiPaperClip } from "react-icons/hi";
 import { GiBackwardTime } from "react-icons/gi";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -18,28 +18,18 @@ const ProblemResultAnswer = () => {
 
   useEffect(() => {
     const fetchTaskAndSubmission = async () => {
+      if (!user?._id) return;
       try {
-        const [taskRes, submissionRes] = await Promise.all([axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_TYPE("problem")), axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("problem", user._id))]);
+        const taskRes = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(taskId));
+        setTask(taskRes.data);
 
-        const taskData = taskRes.data.tasks.find((t) => t._id === taskId);
-        const allSubmissions = submissionRes.data.submissions;
+        const submissionRes = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("problem", user._id));
+        const userSubmissions = (submissionRes.data?.submissions || []).filter((s) => s.task?._id === taskId);
 
-        const relevantSubmissions = allSubmissions.filter((sub) => {
-          return sub.task?._id === taskId;
-        });
-
-        if (relevantSubmissions.length === 0) {
-          setTask(taskData);
-          setSubmission(null);
-          return;
+        if (userSubmissions.length > 0) {
+          const latestSubmission = userSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+          setSubmission(latestSubmission);
         }
-
-        relevantSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        const latestSubmission = relevantSubmissions[0];
-
-        setTask(taskData);
-        setSubmission(latestSubmission);
       } catch (error) {
         console.error("❌ Error fetching data:", error);
       } finally {
@@ -48,10 +38,11 @@ const ProblemResultAnswer = () => {
     };
 
     if (user?._id) fetchTaskAndSubmission();
-  }, [user]);
+  }, [user, taskId]);
 
   if (loading) return <div className="text-center mt-10">Memuat hasil problem...</div>;
-
+  if (!task || !submission) return <div className="text-center mt-10">Data jawaban tidak ditemukan.</div>;
+  console.log(submission);
   return (
     <DashboardLayout activeMenu="Courses">
       <div className="flex flex-col md:flex-row gap-6 p-6">
@@ -80,9 +71,37 @@ const ProblemResultAnswer = () => {
                   <div key={ans.questionId} className="mb-2">
                     <h4 className="font-semibold mb-1">Kelompok {groupIndex + 1}</h4>
                     <p className="font-medium text-md mb-1">Soal:</p>
-                    <p className="text-gray-800 mb-2">{problem?.problem || "Soal tidak ditemukan"}</p>
-                    <p className="font-medium text-md mb-1">Jawaban Anda:</p>
-                    <p className="bg-gray-100 p-3 rounded text-sm mb-2">{ans.problem || "-"}</p>
+                    <p className="text-gray-800 mb-1">{problem?.problem || "Soal tidak ditemukan"}</p>
+                    {problem?.pdfFiles && problem.pdfFiles.length > 0 && (
+                      <div className="mt-2 space-y-4">
+                        {problem.pdfFiles.map((file, i) => (
+                          <div key={i}>
+                            <p className="text-xs text-gray-600 mb-1">{decodeURI(file.split("/").pop())}</p>
+                            <iframe src={encodeURI(file)} width="100%" height="500px" style={{ border: "1px solid #ddd" }} title={`File Soal ${i + 1}`} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="font-medium text-md mt-3 mb-1">Jawaban Teks:</p>
+                    <p className="bg-gray-100 p-3 rounded text-sm mb-4">{ans.problem || "-"}</p>
+
+                    {ans.files && ans.files.length > 0 && (
+                      <div>
+                        <p className="font-medium text-md mb-1">File Jawaban Terlampir:</p>
+                        <div className="space-y-4">
+                          <div key={0}>
+                            <p className="text-xs text-gray-600 mb-1 font-semibold">File Hasil Diskusi:</p>
+                            <iframe src={encodeURI(ans.files[0])} width="100%" height="500px" style={{ border: "1px solid #ddd" }} title={`File Diskusi`} />
+                          </div>
+                          {ans.files.slice(1).map((file, i) => (
+                            <div key={i + 1}>
+                              <p className="text-xs text-gray-600 mb-1 font-semibold">File Jawaban {i + 1}:</p>
+                              <iframe src={encodeURI(file)} width="100%" height="500px" style={{ border: "1px solid #ddd" }} title={`File Jawaban ${i + 1}`} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })

@@ -15,8 +15,6 @@ const ProblemAnswerDetail = () => {
   const [task, setTask] = useState(null);
   const [submission, setSubmission] = useState(null);
   const [problemScores, setProblemScores] = useState({});
-  const [groupChats, setGroupChats] = useState({});
-  const [groupMessages, setGroupMessages] = useState({});
   const [file, setFile] = useState(null);
 
   useEffect(() => {
@@ -35,7 +33,7 @@ const ProblemAnswerDetail = () => {
         relevantSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         const latestSubmission = relevantSubmissions[0];
-        console.log(latestSubmission);
+
         if (!latestSubmission) {
           toast.error("Data jawaban tidak ditemukan");
           return;
@@ -48,28 +46,10 @@ const ProblemAnswerDetail = () => {
         setTask(taskData);
 
         const initScores = {};
-        const chatGroups = {};
-        const chatMessages = {};
-
-        await Promise.all(
-          latestSubmission.problemAnswer?.map(async (a) => {
-            initScores[a.questionId] = 0;
-            try {
-              const resGroup = await axiosInstance.get(`/api/groups/problem/${a.questionId}`);
-              const group = resGroup.data;
-              chatGroups[a.questionId] = group;
-
-              const resMessages = await axiosInstance.get(`/api/groups/${group._id}/messages`);
-              chatMessages[a.questionId] = resMessages.data;
-            } catch (err) {
-              console.warn("Gagal mengambil grup atau pesan untuk", a.questionId);
-            }
-          })
-        );
-
+        (latestSubmission.problemAnswer || []).forEach((ans) => {
+          initScores[ans.questionId] = ans.score || 0;
+        });
         setProblemScores(initScores);
-        setGroupChats(chatGroups);
-        setGroupMessages(chatMessages);
       } catch (err) {
         toast.error("Gagal memuat data jawaban siswa");
         console.error(err);
@@ -77,7 +57,7 @@ const ProblemAnswerDetail = () => {
     };
 
     fetchData();
-  }, [userId]);
+  }, [userId, taskId]);
 
   useEffect(() => {
     const values = Object.values(problemScores);
@@ -88,24 +68,27 @@ const ProblemAnswerDetail = () => {
   }, [problemScores]);
 
   const handleProblemScoreChange = (problemId, value) => {
-    const updated = {
-      ...problemScores,
-      [problemId]: isNaN(value) ? 0 : value,
-    };
-    setProblemScores(updated);
+    setProblemScores((prev) => ({
+      ...prev,
+      [problemId]: isNaN(Number(value)) ? 0 : Number(value),
+    }));
   };
 
   const handleScoreSubmit = async () => {
     if (!submission?.task?._id) return toast.error("Task ID belum tersedia");
+    const formData = new FormData();
+
+    formData.append("score", score);
+    formData.append("problemScores", JSON.stringify(problemScores));
+
+    if (file) {
+      formData.append("feedbackFile", file);
+    }
 
     try {
       setIsSubmitting(true);
-      await axiosInstance.put(API_PATHS.TASKS.POST_SUBMISSION_SCORE("problem", submission.task._id, userId), {
-        score,
-        problemScores,
-        if(file) {
-          formData.append("feedbackFile", file);
-        },
+      await axiosInstance.put(API_PATHS.TASKS.POST_SUBMISSION_SCORE("problem", submission.task._id, userId), formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
       toast.success("Nilai berhasil disimpan");
       navigate(`/admin/list-answer/problem/${submission.task._id}`);
@@ -151,70 +134,58 @@ const ProblemAnswerDetail = () => {
               <p className="text-sm italic text-gray-500">User belum mengerjakan soal problem.</p>
             ) : (
               submission.problemAnswer.map((ans) => {
-                const problem = task.problem.find((p) => p._id === ans.questionId);
+                const problemDetail = task.problem.find((p) => p._id === ans.questionId);
                 const groupIndex = task.problem.findIndex((p) => p._id === ans.questionId);
 
                 return (
                   <div key={ans.questionId} className="mb-8 rounded-lg">
                     <p className="font-medium text-lg mb-2">Kelompok {groupIndex + 1}</p>
                     <p className="font-medium text-md mb-2">Soal:</p>
-                    <p className="mb-2">{problem?.problem || "Soal tidak ditemukan"}</p>
+                    <p className="mb-2">{problemDetail?.problem || "Soal tidak ditemukan"}</p>
+
+                    {problemDetail?.pdfFiles && problemDetail.pdfFiles.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm font-semibold mb-2 text-gray-700">File Soal Terlampir:</p>
+                        <div className="space-y-4">
+                          {problemDetail.pdfFiles.map((file, i) => (
+                            <div key={i}>
+                              <p className="text-xs text-gray-600 mb-1">{decodeURI(file.split("/").pop())}</p>
+                              <iframe src={encodeURI(file)} width="100%" height="500px" style={{ border: "1px solid #ddd", borderRadius: "8px" }} title={`File Soal ${i + 1}`} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <p className="font-medium text-md mt-4 mb-1">Jawaban:</p>
                     <p className="text-gray-700">{ans.problem || "-"}</p>
 
-                    <label className="block mt-4 mb-2 font-medium text-sm">Nilai:</label>
-                    <input
-                      type="number"
-                      className="border rounded px-3 py-1 w-32"
-                      min={0}
-                      max={100}
-                      value={problemScores[ans.questionId] !== undefined && problemScores[ans.questionId] !== null ? parseInt(problemScores[ans.questionId]) || "" : ""}
-                      onChange={(e) => handleProblemScoreChange(ans.questionId, Number(e.target.value))}
-                    />
-
-                    {/* Chat Group Section */}
-                    {groupChats[ans.questionId] && (
-                      <div className="mt-6">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Obrolan Grup</h4>
-                        <div className="h-60 overflow-y-auto border p-2 rounded mb-3 bg-gray-50">
-                          {groupMessages[ans.questionId]?.length > 0 ? (
-                            groupMessages[ans.questionId].map((msg, i) => {
-                              const isMe = false; // Admin tidak membandingkan user, jadi selalu false
-                              return (
-                                <div key={i} className={`flex mb-3 ${isMe ? "justify-end" : "justify-start"}`}>
-                                  <div className={`max-w-[80%] ${isMe ? "text-right" : "text-left"}`}>
-                                    {!isMe && (
-                                      <div className="flex items-center gap-2 mb-1">
-                                        {msg?.senderId?.profileImageUrl ? (
-                                          <img src={msg.senderId.profileImageUrl} alt="avatar" className="w-6 h-6 rounded-full" />
-                                        ) : (
-                                          <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                                            <span className="text-xs text-gray-700">👤</span>
-                                          </div>
-                                        )}
-                                        <span className="text-xs text-gray-500">{msg.senderId?.name || "Anonim"}</span>
-                                      </div>
-                                    )}
-
-                                    <div className={`px-4 py-2 rounded-lg text-sm ${isMe ? "bg-blue-600 text-white rounded-br-none" : "bg-gray-100 text-gray-800 rounded-bl-none"}`}>{msg.message}</div>
-
-                                    <p className="text-xs text-gray-400 mt-1">
-                                      {new Date(msg.createdAt).toLocaleTimeString("id-ID", {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })}
-                                    </p>
-                                  </div>
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <p className="text-gray-500">Belum ada pesan dalam grup ini.</p>
-                          )}
+                    {ans.files && ans.files.length > 0 && (
+                      <div className="mt-4">
+                        <p className="font-medium text-md mb-2">File Jawaban:</p>
+                        <div className="space-y-4">
+                          {ans.files.map((file, i) => (
+                            <div key={i}>
+                              <p className="text-xs text-gray-600 mb-1">{decodeURI(file.split("/").pop())}</p>
+                              <iframe src={encodeURI(file)} width="100%" height="500px" style={{ border: "1px solid #ddd", borderRadius: "8px" }} title={`File Jawaban ${i + 1}`} />
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
+
+                    <div className="mt-4">
+                      <label className="block font-medium text-sm">Nilai untuk Kelompok Ini:</label>
+                      <input
+                        type="number"
+                        className="border rounded px-3 py-1 w-32 mt-1"
+                        placeholder="0"
+                        min={0}
+                        max={100}
+                        value={problemScores[ans.questionId] || ""}
+                        onChange={(e) => handleProblemScoreChange(ans.questionId, e.target.value)}
+                      />
+                    </div>
                   </div>
                 );
               })

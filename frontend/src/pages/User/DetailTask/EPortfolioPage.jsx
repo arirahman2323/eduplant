@@ -28,8 +28,18 @@ const EPortfolioPage = () => {
     try {
       const res = await axiosInstance.get(`/api/tasks/full-submissions/${userId}`);
       const rawData = res.data;
+      const allSubmissions = [...(rawData.taskSubmissions || []), ...(rawData.mindmapSubmissions || [])];
 
-      const combinedSubmissions = [...(rawData.taskSubmissions || []), ...(rawData.mindmapSubmissions || [])];
+      const latestSubmissionsMap = new Map();
+      allSubmissions.forEach((submission) => {
+        if (!submission.task?._id) return;
+        const taskId = submission.task._id;
+        const existing = latestSubmissionsMap.get(taskId);
+        if (!existing || new Date(submission.submittedAt) > new Date(existing.submittedAt)) {
+          latestSubmissionsMap.set(taskId, submission);
+        }
+      });
+      const latestSubmissionsArray = Array.from(latestSubmissionsMap.values());
 
       const taskOrder = [
         "pretest",
@@ -62,7 +72,7 @@ const EPortfolioPage = () => {
         return taskOrder.length;
       };
 
-      const sortedSubmissions = combinedSubmissions.sort((a, b) => getTaskOrderIndex(a) - getTaskOrderIndex(b));
+      const sortedSubmissions = latestSubmissionsArray.sort((a, b) => getTaskOrderIndex(a) - getTaskOrderIndex(b));
 
       setData({
         ...rawData,
@@ -276,11 +286,44 @@ const EPortfolioPage = () => {
                         return (
                           <div key={p._id} className="mb-4">
                             <p className="font-medium">Problem Kelompok {originalIndex + 1}:</p>
-                            <div className="pl-4 mt-1 border-l-2 border-gray-200">
-                              <p className="italic mb-1">{p.problem || "(Soal belum tersedia)"}</p>
-                              <p>
-                                <strong>Jawaban:</strong> {answer?.problem || "Belum dijawab"}
-                              </p>
+                            <div className="pl-4 mt-2 border-l-4 border-gray-300">
+                              {/* Soal Section */}
+                              <div className="mb-4">
+                                <p className="italic mb-2 text-gray-700">{p.problem || "(Soal belum tersedia)"}</p>
+                                {p.pdfFiles && p.pdfFiles.length > 0 && (
+                                  <div className="mt-2">
+                                    <p className="font-medium mb-1">File Soal:</p>
+                                    {p.pdfFiles.map((fileUrl, fileIdx) => (
+                                      <div key={fileIdx} className="mb-4">
+                                        <div className="print:hidden">
+                                          <iframe src={fileUrl} width="100%" height="500px" className="rounded border" title={`Soal PDF ${originalIndex + 1}-${fileIdx + 1}`} />
+                                        </div>
+                                        <div className="hidden print:block text-gray-500 text-sm border p-2 mt-2">[Konten file PDF soal tidak disertakan dalam hasil cetak]</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Jawaban Section */}
+                              <div className="mt-4 pt-4 border-t">
+                                <p className="mb-2">
+                                  <strong>Jawaban:</strong> {answer?.problem || "Belum dijawab"}
+                                </p>
+                                {answer?.files && answer.files.length > 0 && (
+                                  <div className="mt-2">
+                                    <p className="font-medium mb-1">File Jawaban:</p>
+                                    {answer.files.map((fileUrl, fileIdx) => (
+                                      <div key={fileIdx} className="mb-4">
+                                        <div className="print:hidden">
+                                          <iframe src={fileUrl} width="100%" height="500px" className="rounded border" title={`Jawaban PDF ${originalIndex + 1}-${fileIdx + 1}`} />
+                                        </div>
+                                        <div className="hidden print:block text-gray-500 text-sm border p-2 mt-2">[Konten file PDF jawaban tidak disertakan dalam hasil cetak]</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );

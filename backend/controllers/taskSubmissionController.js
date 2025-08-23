@@ -7,11 +7,7 @@ const TaskSubmission = require("../models/TaskSubmission");
 const submitTaskAnswer = async (req, res) => {
   try {
     const { type, taskId } = req.params;
-    let {
-      essayAnswers = [],
-      multipleChoiceAnswers = [],
-      problemAnswer = [],
-    } = req.body;
+    let { essayAnswers = [], multipleChoiceAnswers = [], problemAnswer = [] } = req.body;
 
     const userId = req.user._id;
 
@@ -24,39 +20,44 @@ const submitTaskAnswer = async (req, res) => {
     const task = await Task.findById(taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // ✅ File global (kalau ada)
-    const globalFiles = req.files
-      ?.filter((file) => file.fieldname === "files") // hanya yang fieldname=files
-      .map((file) => `${req.protocol}://${req.get("host")}/uploads/${file.filename}`) || [];
+    let filesToSave = [];
 
-    // ✅ Handle problem answers
     if (type === "problem") {
-      // form-data parse JSON string? pastikan problemAnswer berupa array object
+      let parsedProblemAnswer;
       if (typeof problemAnswer === "string") {
-        problemAnswer = JSON.parse(problemAnswer);
+        try {
+          parsedProblemAnswer = JSON.parse(problemAnswer);
+        } catch (e) {
+          return res.status(400).json({ message: "Invalid problemAnswer JSON format" });
+        }
+      } else {
+        parsedProblemAnswer = problemAnswer;
       }
 
-      problemAnswer = problemAnswer.map((ans, idx) => {
-        const matchedProblem = task.problem.find(
-          (p) => p._id.toString() === ans.questionId
-        );
-        if (!matchedProblem) throw new Error("Invalid problem ID");
+      const allUploadedFiles = [];
+      if (req.files && req.files.length > 0) {
+        req.files.forEach((file) => {
+          allUploadedFiles.push(`${req.protocol}://${req.get("host")}/uploads/${file.filename}`);
+        });
+      }
 
-        // Ambil file berdasarkan index problemAnswer[0][files], problemAnswer[1][files], dst
-        const relatedFiles = req.files
-          ?.filter((file) => file.fieldname === `problemAnswer[${idx}][files]`)
-          .map(
-            (file) =>
-              `${req.protocol}://${req.get("host")}/uploads/${file.filename}`
-          ) || [];
+      if (parsedProblemAnswer && parsedProblemAnswer.length > 0) {
+        const originalAnswer = parsedProblemAnswer[0];
+        problemAnswer = [
+          {
+            questionId: originalAnswer.questionId,
+            problem: originalAnswer.problem,
+            groupId: originalAnswer.groupId,
+            files: allUploadedFiles,
+          },
+        ];
+      }
 
-        return {
-          questionId: ans.questionId,
-          problem: ans.problem,
-          groupId: matchedProblem.groupId,
-          files: relatedFiles, // ⬅️ sekarang masuk ke tiap problemAnswer
-        };
-      });
+      filesToSave = [];
+    } else {
+      if (req.files && req.files.length > 0) {
+        filesToSave = req.files.map((file) => `${req.protocol}://${req.get("host")}/uploads/${file.filename}`);
+      }
     }
 
     const submission = await TaskSubmission.create({
@@ -65,7 +66,7 @@ const submitTaskAnswer = async (req, res) => {
       essayAnswers,
       multipleChoiceAnswers,
       problemAnswer,
-      files: globalFiles, // ⬅️ simpan file global juga
+      files: filesToSave,
     });
 
     res.status(201).json({
@@ -76,9 +77,6 @@ const submitTaskAnswer = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
-
-
 
 // @desc    Get all task submissions by user ID and task type
 // @route   GET /api/task-submissions/:type/user/:userId
@@ -262,12 +260,12 @@ const updateTotalScore = async (req, res) => {
     // Update nilai
     submissionToUpdate.score = score;
 
-    // Untuk LO / KBK, simpan explanation dan file
+    if (req.file) {
+      submissionToUpdate.feedbackFile = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+    }
+
     if (["lo", "kbk"].includes(type)) {
       submissionToUpdate.explanation = explanation || "";
-      if (req.file) {
-        submissionToUpdate.feedbackFile = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-      }
     }
 
     submissionToUpdate.task.status = "Completed"; // optional

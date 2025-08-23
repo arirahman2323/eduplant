@@ -18,29 +18,31 @@ const ProblemPage = () => {
 
   // Cek dari localStorage
   useEffect(() => {
-    const stored = localStorage.getItem(`selectedGroup_${id}_${user?._id}`);
-    if (stored) {
-      setSelectedGroupId(stored);
+    const storedGroupId = localStorage.getItem(`selectedGroup_${id}_${user?._id}`);
+    if (storedGroupId) {
+      setSelectedGroupId(storedGroupId);
     }
   }, [id, user]);
 
   useEffect(() => {
     const getTaskAndSubmission = async () => {
+      if (!user?._id) return;
       try {
         const res = await axiosInstance.get(API_PATHS.TASKS.GET_TASK_BY_ID(id));
         setTask(res.data);
 
         // Fetch submission user
         const submissionRes = await axiosInstance.get(API_PATHS.TASKS.GET_SUBMISSION_BY_ID_USER("problem", user._id));
-        const found = submissionRes.data.submissions.find((s) => s.task._id === id);
-        if (found) {
-          setSubmission(found);
+        const userSubmissions = (submissionRes.data?.submissions || []).filter((s) => s.task._id === id);
 
-          // Cek groupId dari jawaban
-          const answered = found.problemAnswer?.[0];
-          if (answered?.groupId) {
-            setSelectedGroupId(answered.groupId);
-            localStorage.setItem(`selectedGroup_${id}_${user._id}`, answered.groupId);
+        if (userSubmissions.length > 0) {
+          const latestSubmission = userSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+          setSubmission(latestSubmission);
+
+          const answeredProblem = latestSubmission.problemAnswer?.[0];
+          if (answeredProblem?.questionId) {
+            setSelectedGroupId(answeredProblem.groupId);
+            localStorage.setItem(`selectedGroup_${id}_${user._id}`, answeredProblem.groupId);
           }
         }
       } catch (e) {
@@ -53,12 +55,12 @@ const ProblemPage = () => {
     }
   }, [id, user?._id]);
 
-  const handleSelectGroup = (problemId, index) => {
+  const handleSelectGroup = (groupId, index) => {
     // Simpan ke localStorage agar tidak bisa pilih ulang
-    localStorage.setItem(`selectedGroup_${id}_${user._id}`, problemId);
-    setSelectedGroupId(problemId);
+    localStorage.setItem(`selectedProblem_${id}_${user._id}`, groupId);
+    setSelectedGroupId(groupId);
 
-    navigate(`/user/problem/group/${problemId}`, {
+    navigate(`/user/problem/group/${groupId}`, {
       state: { groupNumber: index + 1, taskId: task._id },
     });
   };
@@ -84,7 +86,8 @@ const ProblemPage = () => {
             {task.problem.length === 6 && (
               <div className="flex gap-2 mt-2 mb-4">
                 {task.problem.map((item, index) => {
-                  const isDisabled = selectedGroupId && selectedGroupId !== item.groupId;
+                  const isSelected = selectedGroupId === item.groupId;
+                  const isDisabled = selectedGroupId && !isSelected;
 
                   return (
                     <button
