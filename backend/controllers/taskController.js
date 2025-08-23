@@ -273,7 +273,7 @@ const updateTaskQuestionsOnly = async (req, res) => {
       if (problemToUpdate) {
         const newFileUrls = req.files.map((file) => `${req.protocol}://${req.get("host")}/uploads/${file.filename}`);
 
-        problemToUpdate.pdfFiles = [...(problemToUpdate.pdfFiles || []), ...newFileUrls];
+        problemToUpdate.pdfFiles = newFileUrls;
       } else {
         console.warn("Menerima file upload tetapi tidak menemukan problemId yang cocok untuk diupdate.");
       }
