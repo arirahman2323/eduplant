@@ -81,6 +81,7 @@ const UserSetting = () => {
       await axiosInstance.put(API_PATHS.USERS.UPDATE_USER_BY_ID(user._id), payload);
 
       toast.success("Profil berhasil diperbarui!");
+      window.location.reload();
     } catch (error) {
       console.error("Error updating profile:", error);
       const message = error.response?.data?.message || "Gagal memperbarui profil";
