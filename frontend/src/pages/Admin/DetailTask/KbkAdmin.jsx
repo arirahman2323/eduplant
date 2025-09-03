@@ -60,7 +60,7 @@ const KbkAdmin = () => {
         {
           _id: new ObjectId().toHexString(),
           question: "",
-          options: ["Sangat Tidak Setuju", "Tidak Setuju", "Netral", "Setuju", "Sangat Setuju"],
+          options: ["Selalu", "Sering", "Jarang", "Tidak Pernah"],
         },
       ],
     }));
@@ -161,7 +161,7 @@ const KbkAdmin = () => {
 
           {/* Bagian Kuisioner */}
           <div className="border-t-2 border-gray-200 pt-4">
-            <h3 className="font-medium text-lg mb-2">Soal Kuisioner (Pilihan Ganda)</h3>
+            <h3 className="font-medium text-lg mb-2">Soal Angket (Pilihan)</h3>
             {form.multipleChoiceQuestions.map((q, i) => (
               <div key={q._id || i} className="flex items-center gap-2 mb-2">
                 <input value={q.question} onChange={(e) => handleMCQChange(i, e.target.value)} placeholder={`Pertanyaan Kuisioner ${i + 1}`} className="border border-gray-400 rounded-md p-2 w-full" />
@@ -177,7 +177,7 @@ const KbkAdmin = () => {
 
           {/* Bagian Angket */}
           <div className="border-t-2 border-gray-200 pt-4">
-            <h3 className="font-medium text-lg mb-2">Soal Angket (Esai)</h3>
+            <h3 className="font-medium text-lg mb-2">Soal Esai</h3>
             {form.essayQuestions.map((q, i) => (
               <div key={q._id || i} className="flex items-center gap-2 mb-2">
                 <input value={q.question} onChange={(e) => handleEssayChange(i, e.target.value)} placeholder={`Pertanyaan Angket ${i + 1}`} className="border border-gray-400 rounded-md p-2 w-full" />

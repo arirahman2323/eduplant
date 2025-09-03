@@ -96,7 +96,9 @@ const LoPage = () => {
 
           <div className="bg-white p-4 rounded-lg shadow mb-6">
             <h2 className="text-xl font-semibold">{task.title}</h2>
-            <p className="text-gray-600">{task.description}</p>
+            <p className="text-gray-600" style={{ whiteSpace: "pre-wrap" }}>
+              {task.description}
+            </p>
             <p className="mt-4 text-sm text-black">{(task.multipleChoiceQuestions?.length || 0) + (task.essayQuestions?.length || 0)} Soal</p>
             <div className="mt-2 h-2 bg-blue-500 rounded-full"></div>
           </div>
@@ -104,7 +106,7 @@ const LoPage = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {task.multipleChoiceQuestions && task.multipleChoiceQuestions.length > 0 && (
               <div className="bg-white p-4 rounded-lg shadow">
-                <h3 className="text-xl font-semibold mb-4">Kuisioner</h3>
+                <h3 className="text-xl font-semibold mb-4">Angket</h3>
                 {task.multipleChoiceQuestions.map((q) => (
                   <div key={q._id} className="mb-6 border-t pt-4">
                     <p className="font-semibold mb-2">{q.question}</p>
@@ -127,7 +129,7 @@ const LoPage = () => {
 
             {task.essayQuestions && task.essayQuestions.length > 0 && (
               <div className="bg-white p-4 rounded-lg shadow">
-                <h3 className="text-xl font-semibold mb-4">Angket</h3>
+                <h3 className="text-xl font-semibold mb-4">Soal Esai</h3>
                 {task.essayQuestions.map((q, i) => (
                   <div key={q._id} className="mb-6 border-t pt-4">
                     <h3 className="font-semibold mb-2">Pertanyaan {i + 1}</h3>

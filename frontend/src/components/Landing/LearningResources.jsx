@@ -18,8 +18,8 @@ const resources = [
 
 const LearningResources = () => {
   return (
-    <section className="py-16 px-6 bg-gray-50 text-center">
-      <div className="max-w-3xl mx-auto">
+    <section className="pt-12 bg-gray-50 text-center">
+      <div className="max-w-3xl mb-4 mx-auto">
         <h2 className="text-xl font-bold text-gray-800 mb-6">Perangkat Pembelajaran</h2>
         <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
           {resources.map((res, index) => (
@@ -30,11 +30,31 @@ const LearningResources = () => {
         </div>
       </div>
 
-      <div className="flex justify-center mt-10">
-        <Link to="/login" className="bg-gray-700 text-white py-2 px-4 rounded-md hover:bg-gray-900 text-sm flex items-center gap-2">
-          Mulai Belajar
-          <span>→</span>
-        </Link>
+      <div className="bg-white pb-10">
+        <div className="mt-12 mb-2 max-w-6xl mx-auto p-6 bg-white rounded-lg">
+          <p className="text-lg font-bold text-gray-800 mb-4">Tim Pengembang</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg shadow-md bg-blue-50">
+              <p className="text-md text-gray-600">Pengembang :</p>
+              <p className="font-semibold text-blue-700">Luffi Karimah</p>
+            </div>
+            <div className="p-4 rounded-lg shadow-md bg-green-50">
+              <p className="text-md text-gray-600">Dosen Pembimbing 1 :</p>
+              <p className="font-semibold text-green-700">Dr. Balqis, S.Pd., M.Si.</p>
+            </div>
+            <div className="p-4 rounded-lg shadow-md bg-yellow-50">
+              <p className="text-md text-gray-600">Dosen Pembimbing 2 :</p>
+              <p className="font-semibold text-yellow-700">Prof. Dra. Herawati Susilo, M.Sc., Ph.D.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-center mt-4">
+          <Link to="/login" className="bg-gray-700 text-white py-2 px-4 rounded-md hover:bg-gray-900 text-sm flex items-center gap-2">
+            Mulai Belajar
+            <span>→</span>
+          </Link>
+        </div>
       </div>
     </section>
   );

@@ -42,24 +42,26 @@ const EPortfolioPage = () => {
       const latestSubmissionsArray = Array.from(latestSubmissionsMap.values());
 
       const taskOrder = [
-        "pretest",
         "ownership 1",
         "kreatif 1",
+        "pretest",
         "orient students",
+        "deskriptif 1",
+        "deskriptif 2",
+        "deskriptif 3",
         "organize",
         "mindmap",
         "materi",
-        "ownership 2",
-        "kreatif 2",
+        "reflektif 1",
+        "reflektif 2",
+        "reflektif 3",
         "assist",
         "develop",
         "analyze",
-        "ownership 3",
-        "kreatif 3",
         "postest",
+        "ownership 2",
+        "kreatif 2",
         "refleksi",
-        "ownership 4",
-        "kreatif 4",
         "e-portfolio",
       ];
 
@@ -84,25 +86,43 @@ const EPortfolioPage = () => {
       const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
       setAverageScore(avg.toFixed(2));
 
-      const loScores = sortedSubmissions.filter((s) => s.task?.title.toLowerCase().includes("ownership")).map((s) => s.score);
+      const findScore = (title) => {
+        const submission = sortedSubmissions.find((s) => s.task?.title.toLowerCase().includes(title.toLowerCase()));
+        return submission ? submission.score : null;
+      };
 
-      const kbkScores = sortedSubmissions.filter((s) => s.task?.title.toLowerCase().includes("kreatif")).map((s) => s.score);
+      const filterAndSumScores = (titles) => {
+        let total = 0;
+        let count = 0;
+        titles.forEach((title) => {
+          const submission = sortedSubmissions.find((s) => s.task?.title.toLowerCase().includes(title.toLowerCase()));
+          if (submission && typeof submission.score === "number") {
+            total += submission.score;
+            count++;
+          }
+        });
+        return count > 0 ? total / count : null;
+      };
+
+      const kbkScores = [findScore("kreatif 1"), findScore("pretest"), findScore("postest"), findScore("kreatif 2")];
+
+      const loScores = [findScore("ownership 1"), filterAndSumScores(["deskriptif 1", "deskriptif 2", "deskriptif 3"]), filterAndSumScores(["reflektif 1", "reflektif 2", "reflektif 3"]), findScore("ownership 2")];
 
       setChartData({
         labels: ["Attempt 1", "Attempt 2", "Attempt 3", "Attempt 4"],
         datasets: [
           {
-            label: "Learning Ownership (LO)",
-            data: loScores,
-            borderColor: "rgb(136, 132, 216)",
-            backgroundColor: "rgba(136, 132, 216, 0.5)",
+            label: "Keterampilan Berpikir Kreatif (KBK)",
+            data: kbkScores.filter((score) => score !== null),
+            borderColor: "rgb(130, 202, 157)",
+            backgroundColor: "rgba(130, 202, 157, 0.5)",
             tension: 0.1,
           },
           {
-            label: "Berpikir Kreatif (KBK)",
-            data: kbkScores,
-            borderColor: "rgb(130, 202, 157)",
-            backgroundColor: "rgba(130, 202, 157, 0.5)",
+            label: "Learning Ownership (LO)",
+            data: loScores.filter((score) => score !== null),
+            borderColor: "rgb(136, 132, 216)",
+            backgroundColor: "rgba(136, 132, 216, 0.5)",
             tension: 0.1,
           },
         ],

@@ -65,24 +65,26 @@ const MyTasks = () => {
 
       const combinedTasks = [...generalTasks, ...mindmapTasks, ...materialTasks];
       const taskOrder = [
-        "pretest",
         "ownership 1",
         "kreatif 1",
+        "pretest",
         "orient students",
+        "deskriptif 1",
+        "deskriptif 2",
+        "deskriptif 3",
         "organize",
         "mindmap",
         "materi",
-        "ownership 2",
-        "kreatif 2",
+        "reflektif 1",
+        "reflektif 2",
+        "reflektif 3",
         "assist",
         "develop",
         "analyze",
-        "ownership 3",
-        "kreatif 3",
         "postest",
+        "ownership 2",
+        "kreatif 2",
         "refleksi",
-        "ownership 4",
-        "kreatif 4",
         "e-portfolio",
       ];
 

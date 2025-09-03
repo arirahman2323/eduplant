@@ -19,10 +19,6 @@ const features = [
     icon: <RiQuestionAnswerLine className="w-8 h-8 text-blue-500" />,
   },
   {
-    title: "Grup Chat",
-    icon: <HiOutlineChatBubbleLeftRight className="w-8 h-8 text-blue-500" />,
-  },
-  {
     title: "E-Portofolio",
     icon: <AiOutlineFolderOpen className="w-8 h-8 text-blue-500" />,
   },
@@ -33,7 +29,7 @@ const Features = () => {
     <section id="fitur" className="py-24 px-6 bg-white text-center">
       <div className="max-w-6xl mx-auto">
         <h2 className="text-xl font-bold text-gray-800 mb-8">Fasilitas Pembelajaran yang Tersedia</h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 justify-items-center">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 justify-items-center">
           {features.map((item, index) => (
             <div key={index} className="border border-blue-100 rounded-lg p-6 w-full flex flex-col items-center shadow-sm hover:shadow-md transition">
               <div className="mb-3 rounded-full bg-blue-50 p-5">{item.icon}</div>

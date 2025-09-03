@@ -71,7 +71,7 @@ const ProblemPage = () => {
     <DashboardLayout activeMenu="Courses">
       <div className="flex flex-col md:flex-row gap-6 p-6">
         <div className="flex-1">
-          <button onClick={() => navigate(-1)} className="flex items-center mb-4 text-blue-600 hover:underline cursor-pointer">
+          <button onClick={() => navigate("/user/tasks")} className="flex items-center mb-4 text-blue-600 hover:underline cursor-pointer">
             <HiChevronLeft className="mr-1" /> Kembali
           </button>
 

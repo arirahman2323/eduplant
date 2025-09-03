@@ -89,57 +89,95 @@ const UserDashboard = () => {
           <img src={logo} alt="logo" className="h-20" />
           <div className="flex flex-col">
             <h4 className="text-2xl font-medium">Hubungan Tumbuhan dengan Air</h4>
-            <p className="text-md text-gray-600">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
-              eu fugiat nulla pariatur.
-            </p>
+            <p className="text-md text-gray-600">Topik ini membahas peran esensial air dalam menunjang kehidupan tumbuhan. Kajian ini mencakup aspek fisiologis yang menentukan keberlangsungan pertumbuhan dan perkembangannya.</p>
           </div>
         </div>
       </div>
 
       <div className="card my-5">
         <h2 className="text-2xl font-semibold mb-4">Apa yang akan Anda pelajari</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-gray-800 mb-6">
-          <p>✓ Create mobile app designs from scratch</p>
-          <p>✓ Create mockups using Figma</p>
-          <p>✓ Understand the differences between designing for iOS and Android</p>
-          <p>✓ Start a new career as a UI/UX designer</p>
-          <p>✓ Create wireframe designs for e-Commerce Project</p>
-        </div>
+        <p className="text-gray-700 mb-4">
+          Topik Hubungan Tumbuhan dengan Air membahas peran esensial air dalam menunjang kehidupan tumbuhan. Kajian ini mencakup aspek fisiologis yang menentukan keberlangsungan pertumbuhan dan perkembangan tumbuhan. Materi utama yang
+          difokuskan meliputi:
+        </p>
+        <ul className="list-disc pl-5 text-gray-800 mb-6 space-y-2">
+          <li>Sel dan Air pada Tumbuhan</li>
+          <li>Keseimbangan Air dalam Tubuh Tumbuhan</li>
+          <li>Nutrisi dan Transport Nutrisi pada Tumbuhan</li>
+        </ul>
+        <p className="text-gray-700 mb-6">
+          Penguasaan materi ini diharapkan mampu membekali mahasiswa dengan pemahaman mendalam mengenai fungsi air dalam proses fisiologis tumbuhan, sekaligus memperluas perspektif tentang keterkaitannya dengan upaya menjaga keberlanjutan
+          ekosistem.
+        </p>
 
-        <h2 className="text-xl font-semibold mb-3">Ketentuan</h2>
+        {/* Mengapa Materi Ini Penting? */}
+        <h2 className="text-2xl font-semibold mb-4">🎯 Mengapa Materi Ini Penting?</h2>
+        <p className="text-gray-700 mb-6">
+          Air berperan sebagai faktor utama yang menentukan kelangsungan hidup tumbuhan. Pemahaman mengenai peran tersebut menjadi dasar untuk menjelaskan proses fisiologis pada tingkat sel maupun jaringan, sekaligus memberi ruang bagi
+          mahasiswa untuk menumbuhkan keterampilan kreatif dalam menafsirkan mekanisme biologis secara mendalam. Kajian tentang transpirasi, keseimbangan air, dan transport nutrisi melatih mahasiswa untuk mengembangkan gagasan baru, mencari
+          hubungan yang tidak biasa, serta merancang solusi inovatif terhadap tantangan lingkungan. Materi ini bukan hanya memperkaya pengetahuan fisiologi tumbuhan, tetapi juga membekali mahasiswa kemampuan kreatif dalam menghubungkan
+          teori dengan konteks nyata yang relevan dengan keberlanjutan ekosistem.
+        </p>
+
+        {/* Model Pembelajaran */}
+        <h2 className="text-2xl font-semibold mb-4">📘 Model Pembelajaran</h2>
+        <p className="text-gray-700 mb-4">
+          Problem-Based Learning (PBL) adalah model pembelajaran yang menggunakan masalah nyata sebagai awal proses belajar. Melalui masalah tersebut, mahasiswa belajar menemukan pengetahuan sendiri, berlatih berpikir tingkat tinggi, serta
+          mengembangkan kreativitas dalam menemukan berbagai alternatif solusi.
+        </p>
+        <p className="font-semibold text-gray-800 mb-2">Tahapan PBL:</p>
+        <ul className="list-decimal pl-5 text-gray-700 space-y-2 mb-6">
+          <li>
+            <strong>Orient Students to the Problem:</strong> Mahasiswa mencari dan merumuskan permasalahan yang berkaitan dengan hubungan tumbuhan dan air, sebagai pemicu lahirnya ide kreatif.
+          </li>
+          <li>
+            <strong>Organize Students for Study:</strong> Mahasiswa mempelajari materi yang relevan untuk memperkaya wawasan dan membuka peluang munculnya beragam gagasan.
+          </li>
+          <li>
+            <strong>Assist Independent and Group Investigation:</strong> Mahasiswa melakukan praktikum, observasi, dan kajian literatur untuk menghasilkan temuan yang dapat dikembangkan secara kreatif.
+          </li>
+          <li>
+            <strong>Develop and Present Artifacts and Exhibits:</strong> Mahasiswa menyusun rancangan solusi dan mengomunikasikannya secara kreatif.
+          </li>
+          <li>
+            <strong>Analyze and Evaluate the Problem-Solving Process:</strong> Mahasiswa menganalisis proses pembelajaran, mengevaluasi solusi yang dihasilkan, serta merefleksikan potensi gagasan baru untuk perbaikan di masa depan.
+          </li>
+        </ul>
+        <p className="text-gray-700 mb-6">
+          Model PBL memberi ruang bagi mahasiswa untuk mengasah keterampilan kreatif, mulai dari merancang pertanyaan, mengeksplorasi ide, hingga menghasilkan solusi inovatif yang relevan dengan konteks fisiologi tumbuhan.
+        </p>
+
+        {/* Pendekatan Pembelajaran */}
+        <h2 className="text-2xl font-semibold mb-4">📘 Pendekatan Pembelajaran</h2>
+        <p className="text-gray-700 mb-4">Pembelajaran menggunakan pendekatan Deep Learning yang berfokus pada pengalaman belajar yang menyenangkan, sadar, dan bermakna. Tiga aspek deep learning adalah:</p>
         <ul className="list-disc pl-5 text-gray-700 space-y-2 mb-6">
-          <li>No pre-knowledge required - we'll teach you everything you need to know</li>
-          <li>A PC or Mac is required</li>
-          <li>No software is required in advance of the course (all software used in the course is free or has a demo version)</li>
+          <li>
+            <strong>Joyful Learning:</strong> Mengukur tingkat kesenangan mahasiswa melalui respons emoticon dan visualisasi streak pertumbuhan tanaman.
+          </li>
+          <li>
+            <strong>Mindful Learning:</strong> Menganalisis kesadaran belajar melalui kualitas, ketelitian, dan konsistensi tugas yang dikumpulkan.
+          </li>
+          <li>
+            <strong>Meaningful Learning:</strong> Mengukur sejauh mana mahasiswa mampu mengaitkan konsep dengan konteks nyata dan merefleksikan proses belajarnya.
+          </li>
         </ul>
 
-        <h2 className="text-xl font-semibold mb-2">Deskripsi</h2>
-        <p className="text-gray-700 mb-2">
-          This Course is great for people with absolutely no design experience or experienced designers who want to get up to speed quickly with mobile app design. We’ll introduce you to the art of making beautiful apps. We’ll explore key
-          UI and UX concepts that are essential to building good looking and easy to use apps that are loved by users.
-        </p>
-        <p className="text-gray-700 mb-2">The course has a practical component that takes you step-by-step through the workflow of a professional app designer. From user flow diagrams to wireframing to mockups and prototypes.</p>
-        <p className="text-gray-700">Students completing the course will have the knowledge to create beautiful and lovable apps that leave people with a smile on their face.</p>
-
-        <button className="mt-4 text-sm text-green-700 hover:underline">See more</button>
+        {/* Evaluasi Pembelajaran */}
+        <h2 className="text-2xl font-semibold mb-4">🧠 Evaluasi Pembelajaran</h2>
+        <p className="text-gray-700 mb-4">Proses pembelajaran akan dinilai melalui beberapa instrumen, yaitu:</p>
+        <ul className="list-disc pl-5 text-gray-700 space-y-2 mb-6">
+          <li>
+            <strong>Angket Learning Ownership & Keterampilan Berpikir Kreatif:</strong> digunakan untuk mengukur tingkat kemandirian belajar serta kemampuan berpikir kreatif mahasiswa.
+          </li>
+          <li>
+            <strong>Esai Deskriptif & Reflektif:</strong> berfungsi untuk menilai pemahaman konsep serta kemampuan merefleksikan pengalaman belajar.
+          </li>
+          <li>
+            <strong>E-Portfolio:</strong> menjadi bukti nyata hasil karya mahasiswa yang memuat solusi, ide, dan perkembangan pembelajaran.
+          </li>
+        </ul>
+        <p className="text-gray-700">Penilaian tidak hanya menekankan pada penguasaan materi, tetapi juga pada kemampuan mahasiswa dalam mengembangkan ide, melakukan refleksi, serta menghasilkan karya yang kreatif.</p>
       </div>
-
-      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-4 md:my-6">
-        <div className="md:col-span-2">
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <h5>Recent Tasks</h5>
-
-              <button className="card-btn" onClick={onSeeMore}>
-                See All <LuArrowRight className="text-base" />
-              </button>
-            </div>
-
-            <TaskListTable tableData={dashboardData?.recentTasks || []} />
-          </div>
-        </div>
-      </div> */}
     </DashboardLayout>
   );
 };
